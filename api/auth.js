@@ -1,0 +1,107 @@
+const connectDB = require('../_lib/db');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+// Generate JWT
+const generateToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: '30d',
+    });
+};
+
+// Helper to get user from token
+const getUserFromToken = (req) => {
+    let user = null;
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            user = decoded;
+        } catch (e) {
+            // Invalid token
+        }
+    }
+    return user;
+};
+
+export default async function handler(req, res) {
+    await connectDB();
+
+    const { method, body } = req;
+    const tokenUser = getUserFromToken(req);
+
+    switch (method) {
+        case 'POST':
+            try {
+                const { name, email, password, action } = body;
+
+                // Register
+                if (action === 'register') {
+                    const userExists = await User.findOne({ email });
+
+                    if (userExists) {
+                        return res.status(400).json({ message: 'User already exists' });
+                    }
+
+                    const user = await User.create({
+                        name,
+                        email,
+                        password,
+                    });
+
+                    if (user) {
+                        return res.status(201).json({
+                            _id: user._id,
+                            name: user.name,
+                            email: user.email,
+                            role: user.role,
+                            token: generateToken(user._id),
+                        });
+                    } else {
+                        return res.status(400).json({ message: 'Invalid user data' });
+                    }
+                }
+
+                // Login
+                const user = await User.findOne({ email }).select('+password');
+
+                if (user && (await user.matchPassword(password))) {
+                    return res.status(200).json({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        token: generateToken(user._id),
+                    });
+                } else {
+                    return res.status(401).json({ message: 'Invalid email or password' });
+                }
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+
+        case 'GET':
+            try {
+                if (!tokenUser) {
+                    return res.status(401).json({ message: 'Not authorized, no token' });
+                }
+
+                const user = await User.findById(tokenUser.id);
+                if (user) {
+                    return res.status(200).json({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                    });
+                } else {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+}
