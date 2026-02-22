@@ -1,5 +1,5 @@
-const connectDB = require('../_lib/db');
-const User = require('../models/User');
+const connectDB = require('./_lib/db');
+const User = require('./_models/User');
 const jwt = require('jsonwebtoken');
 
 // Helper to get user from token
@@ -28,7 +28,7 @@ function corsHeaders(req) {
     };
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         const headers = corsHeaders(req);

@@ -1,5 +1,5 @@
-const connectDB = require('../_lib/db');
-const Product = require('../models/Product');
+const connectDB = require('./_lib/db');
+const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
 
 // Helper to get user from token
@@ -28,7 +28,7 @@ function corsHeaders(req) {
     };
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         const headers = corsHeaders(req);
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
                 if (!tokenUser) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                const User = require('../models/User');
+                const User = require('./_models/User');
                 const user = await User.findById(tokenUser.id);
                 if (!user || user.role !== 'admin') {
                     return res.status(401).json({ message: 'Not authorized as admin' });
@@ -117,7 +117,7 @@ export default async function handler(req, res) {
                 if (!tokenUser) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                const User = require('../models/User');
+                const User = require('./_models/User');
                 const user = await User.findById(tokenUser.id);
                 if (!user || user.role !== 'admin') {
                     return res.status(401).json({ message: 'Not authorized as admin' });
@@ -152,7 +152,7 @@ export default async function handler(req, res) {
                 if (!tokenUser) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                const User = require('../models/User');
+                const User = require('./_models/User');
                 const user = await User.findById(tokenUser.id);
                 if (!user || user.role !== 'admin') {
                     return res.status(401).json({ message: 'Not authorized as admin' });

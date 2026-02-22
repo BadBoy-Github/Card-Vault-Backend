@@ -1,6 +1,6 @@
-const connectDB = require('../_lib/db');
+const connectDB = require('./_lib/db');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('./_models/User');
 
 // Generate JWT
 const generateToken = (id) => {
@@ -35,7 +35,7 @@ function corsHeaders(req) {
     };
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         const headers = corsHeaders(req);
@@ -126,4 +126,4 @@ export default async function handler(req, res) {
         default:
             return res.status(405).json({ message: 'Method not allowed' });
     }
-}
+};

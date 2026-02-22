@@ -1,29 +1,12 @@
 {
-    "version": 2,
-    "builds": [
+    "rewrites": [
         {
-            "src": "api/index.js",
-            "use": "@vercel/node"
+            "source": "/",
+            "destination": "/api/index"
         },
         {
-            "src": "api/auth.js",
-            "use": "@vercel/node"
-        },
-        {
-            "src": "api/products.js",
-            "use": "@vercel/node"
-        },
-        {
-            "src": "api/wishlist.js",
-            "use": "@vercel/node"
-        },
-        {
-            "src": "api/orders.js",
-            "use": "@vercel/node"
-        },
-        {
-            "src": "api/users.js",
-            "use": "@vercel/node"
+            "source": "/api",
+            "destination": "/api/index"
         }
     ]
 }

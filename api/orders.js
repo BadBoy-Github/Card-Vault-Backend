@@ -1,8 +1,8 @@
-const connectDB = require('../_lib/db');
-const Order = require('../models/Order');
-const Product = require('../models/Product');
+const connectDB = require('./_lib/db');
+const Order = require('./_models/Order');
+const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('./_models/User');
 
 // Helper to get user from token
 const getUserFromToken = async (req) => {
@@ -30,7 +30,7 @@ function corsHeaders(req) {
     };
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         const headers = corsHeaders(req);

@@ -1,4 +1,4 @@
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
     // CORS headers
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -19,4 +19,4 @@ export default function handler(req, res) {
             '/api/users'
         ]
     });
-}
+};
