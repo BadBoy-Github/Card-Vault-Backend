@@ -2,7 +2,27 @@
     "version": 2,
     "builds": [
         {
-            "src": "api/**/*.js",
+            "src": "api/index.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "api/auth.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "api/products.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "api/wishlist.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "api/orders.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "api/users.js",
             "use": "@vercel/node"
         }
     ]
