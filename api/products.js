@@ -1,6 +1,5 @@
 const connectDB = require('../_lib/db');
 const Product = require('../models/Product');
-const { protect, admin } = require('../middleware/authMiddleware');
 const jwt = require('jsonwebtoken');
 
 // Helper to get user from token
@@ -18,10 +17,29 @@ const getUserFromToken = (req) => {
     return user;
 };
 
-// @desc    Get all products
-// @route   GET /api/products
-// @access  Public
+// CORS headers
+function corsHeaders(req) {
+    const origin = req.headers.origin || '*';
+    return {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+    };
+}
+
 export default async function handler(req, res) {
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+        const headers = corsHeaders(req);
+        Object.keys(headers).forEach(key => res.setHeader(key, headers[key]));
+        return res.status(204).end();
+    }
+
+    // Set CORS headers for all responses
+    const headers = corsHeaders(req);
+    Object.keys(headers).forEach(key => res.setHeader(key, headers[key]));
+
     await connectDB();
 
     const { method, query, body } = req;
