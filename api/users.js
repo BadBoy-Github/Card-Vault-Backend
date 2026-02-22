@@ -2,6 +2,9 @@ const connectDB = require('./_lib/db');
 const User = require('./_models/User');
 const jwt = require('jsonwebtoken');
 
+// Default admin email that cannot be deleted or have role changed
+const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || 'elayabarathiedison@gmail.com';
+
 // Helper to get user from token
 const getUserFromToken = async (req) => {
     let user = null;
@@ -97,10 +100,14 @@ module.exports = async function handler(req, res) {
 
                     const { name, email, password, role } = body;
 
+                    // Protect default admin from role changes
+                    const isDefaultAdmin = userToUpdate.email === DEFAULT_ADMIN_EMAIL;
+
                     if (name) userToUpdate.name = name;
                     if (email) userToUpdate.email = email;
                     if (password) userToUpdate.password = password;
-                    if (role && isAdmin) userToUpdate.role = role;
+                    // Only allow role change if not default admin
+                    if (role && isAdmin && !isDefaultAdmin) userToUpdate.role = role;
 
                     const updatedUser = await userToUpdate.save();
 
@@ -123,6 +130,10 @@ module.exports = async function handler(req, res) {
                     const userToDelete = await User.findById(userId);
 
                     if (userToDelete) {
+                        // Protect default admin from deletion
+                        if (userToDelete.email === DEFAULT_ADMIN_EMAIL) {
+                            return res.status(403).json({ message: 'Cannot delete the default admin account' });
+                        }
                         await userToDelete.deleteOne();
                         return res.status(200).json({ message: 'User removed' });
                     }

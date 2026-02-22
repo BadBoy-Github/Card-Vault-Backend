@@ -51,6 +51,9 @@ const seedDB = async () => {
         await Product.insertMany(initialProducts);
         console.log('Products seeded successfully');
 
+        // Note: Create admin user using update-admin.js script
+        // Run: node update-admin.js <email> <password>
+        console.log('To create/update admin user, run: node update-admin.js <email> <password>');
 
         process.exit();
     } catch (err) {
