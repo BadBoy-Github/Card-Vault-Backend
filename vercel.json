@@ -7,6 +7,42 @@
         {
             "source": "/api",
             "destination": "/api/index"
+        },
+        {
+            "source": "/api/auth/login",
+            "destination": "/api/auth"
+        },
+        {
+            "source": "/api/auth/register",
+            "destination": "/api/auth"
+        },
+        {
+            "source": "/api/products/:id",
+            "destination": "/api/products"
+        },
+        {
+            "source": "/api/orders/myorders",
+            "destination": "/api/orders"
+        },
+        {
+            "source": "/api/orders/:id/status",
+            "destination": "/api/orders"
+        },
+        {
+            "source": "/api/orders/:id",
+            "destination": "/api/orders"
+        },
+        {
+            "source": "/api/wishlist/add",
+            "destination": "/api/wishlist"
+        },
+        {
+            "source": "/api/wishlist/remove/:productId",
+            "destination": "/api/wishlist"
+        },
+        {
+            "source": "/api/users/:id",
+            "destination": "/api/users"
         }
     ]
 }

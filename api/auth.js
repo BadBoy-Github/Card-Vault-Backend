@@ -52,13 +52,18 @@ module.exports = async function handler(req, res) {
     const { method, body } = req;
     const tokenUser = getUserFromToken(req);
 
+    // Get the path to determine the action
+    const path = req.url.split('?')[0];
+    const isLogin = path.endsWith('/login');
+    const isRegister = path.endsWith('/register');
+
     switch (method) {
         case 'POST':
             try {
-                const { name, email, password, action } = body;
+                const { name, email, password } = body;
 
                 // Register
-                if (action === 'register') {
+                if (isRegister) {
                     const userExists = await User.findOne({ email });
 
                     if (userExists) {

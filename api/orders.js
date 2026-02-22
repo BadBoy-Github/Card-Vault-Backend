@@ -30,6 +30,29 @@ function corsHeaders(req) {
     };
 }
 
+// Parse URL path to determine route
+const parsePath = (url) => {
+    const path = url.split('?')[0];
+    const parts = path.split('/').filter(Boolean);
+
+    // /api/orders/myorders or /orders/myorders
+    if (parts.includes('myorders')) {
+        return { action: 'myorders' };
+    }
+
+    // /api/orders/123/status or /orders/123/status
+    if (parts.length >= 4 && parts[parts.length - 1] === 'status') {
+        return { action: 'status', id: parts[parts.length - 2] };
+    }
+
+    // /api/orders/123 or /orders/123
+    if (parts.length >= 3 && parts[parts.length - 1] !== 'orders') {
+        return { action: 'single', id: parts[parts.length - 1] };
+    }
+
+    return { action: 'all' };
+};
+
 module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
@@ -44,46 +67,126 @@ module.exports = async function handler(req, res) {
 
     await connectDB();
 
-    const { method, query, body } = req;
+    const { method, body } = req;
     const user = await getUserFromToken(req);
+    const { action, id } = parsePath(req.url);
 
     // For admin routes, check if user is admin
     const isAdmin = user && user.role === 'admin';
 
-    switch (method) {
-        case 'GET':
+    // Handle myorders route
+    if (action === 'myorders') {
+        if (!user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+        if (method === 'GET') {
             try {
-                if (!user) {
-                    return res.status(401).json({ message: 'Not authorized' });
-                }
+                const orders = await Order.find({ user: user._id }).sort({ createdAt: -1 });
+                return res.status(200).json(orders);
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+        }
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
 
-                // Get user's orders
-                if (query.myorders) {
-                    const orders = await Order.find({ user: user._id });
-                    return res.status(200).json(orders);
+    // Handle status update route
+    if (action === 'status') {
+        if (!user || !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized as admin' });
+        }
+        if (method === 'PUT') {
+            try {
+                const { status } = body;
+                const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+                if (order) {
+                    return res.status(200).json(order);
                 }
+                return res.status(404).json({ message: 'Order not found' });
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+        }
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
 
-                // Get single order
-                if (query.id) {
-                    const order = await Order.findById(query.id).populate('user', 'name email');
+    // Handle single order route
+    if (action === 'single') {
+        if (!user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        switch (method) {
+            case 'GET':
+                try {
+                    const order = await Order.findById(id).populate('user', 'name email');
                     if (order) {
                         // Check if user owns order or is admin
                         if (order.user._id.toString() !== user._id.toString() && !isAdmin) {
                             return res.status(403).json({ message: 'Not authorized' });
                         }
                         return res.status(200).json(order);
-                    } else {
-                        return res.status(404).json({ message: 'Order not found' });
                     }
+                    return res.status(404).json({ message: 'Order not found' });
+                } catch (error) {
+                    return res.status(500).json({ message: error.message });
                 }
 
+            case 'PUT':
+                try {
+                    if (!isAdmin) {
+                        return res.status(403).json({ message: 'Not authorized as admin' });
+                    }
+                    const order = await Order.findByIdAndUpdate(id, body, { new: true });
+                    if (order) {
+                        return res.status(200).json(order);
+                    }
+                    return res.status(404).json({ message: 'Order not found' });
+                } catch (error) {
+                    return res.status(500).json({ message: error.message });
+                }
+
+            case 'DELETE':
+                try {
+                    if (!isAdmin) {
+                        return res.status(403).json({ message: 'Not authorized as admin' });
+                    }
+                    const order = await Order.findById(id);
+                    if (order) {
+                        // Restore stock
+                        for (const item of order.orderItems) {
+                            const product = await Product.findById(item.product);
+                            if (product) {
+                                product.stock += item.qty;
+                                await product.save();
+                            }
+                        }
+                        await order.deleteOne();
+                        return res.status(200).json({ message: 'Order removed' });
+                    }
+                    return res.status(404).json({ message: 'Order not found' });
+                } catch (error) {
+                    return res.status(500).json({ message: error.message });
+                }
+
+            default:
+                return res.status(405).json({ message: 'Method not allowed' });
+        }
+    }
+
+    // Handle all orders route
+    switch (method) {
+        case 'GET':
+            try {
+                if (!user) {
+                    return res.status(401).json({ message: 'Not authorized' });
+                }
                 // Get all orders (admin only)
                 if (isAdmin) {
-                    const orders = await Order.find({}).populate('user', 'id name');
+                    const orders = await Order.find({}).populate('user', 'id name').sort({ createdAt: -1 });
                     return res.status(200).json(orders);
                 }
-
-                return res.status(400).json({ message: 'Invalid request' });
+                return res.status(403).json({ message: 'Not authorized as admin' });
             } catch (error) {
                 return res.status(500).json({ message: error.message });
             }
@@ -125,110 +228,7 @@ module.exports = async function handler(req, res) {
                 return res.status(500).json({ message: error.message });
             }
 
-        case 'PUT':
-            try {
-                if (!user) {
-                    return res.status(401).json({ message: 'Not authorized' });
-                }
-
-                if (!isAdmin) {
-                    return res.status(403).json({ message: 'Not authorized as admin' });
-                }
-
-                const order = await Order.findById(query.id);
-
-                if (order) {
-                    // Update order status
-                    if (body.status) {
-                        order.status = body.status;
-                    }
-
-                    // Update order items if provided
-                    if (body.orderItems) {
-                        // Handle stock adjustments
-                        const oldOrderItems = [...order.orderItems];
-                        order.orderItems = body.orderItems;
-
-                        for (const newItem of body.orderItems) {
-                            const oldItem = oldOrderItems.find(i => {
-                                const oldProductId = i.product instanceof Object ? i.product.toString() : i.product;
-                                const newProductId = typeof newItem.product === 'string' ? newItem.product : newItem.product.toString();
-                                return oldProductId === newProductId;
-                            });
-
-                            if (oldItem) {
-                                const diff = newItem.qty - oldItem.qty;
-                                if (diff !== 0) {
-                                    const product = await Product.findById(newItem.product);
-                                    if (product) {
-                                        if (diff < 0) {
-                                            product.stock += Math.abs(diff);
-                                        } else {
-                                            if (product.stock < diff) {
-                                                return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
-                                            }
-                                            product.stock -= diff;
-                                        }
-                                        await product.save();
-                                    }
-                                }
-                            } else {
-                                const product = await Product.findById(newItem.product);
-                                if (product) {
-                                    if (product.stock < newItem.qty) {
-                                        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
-                                    }
-                                    product.stock -= newItem.qty;
-                                    await product.save();
-                                }
-                            }
-                        }
-                    }
-
-                    order.totalPrice = body.totalPrice || order.totalPrice;
-                    order.status = body.status || order.status;
-
-                    const updatedOrder = await order.save();
-                    return res.status(200).json(updatedOrder);
-                } else {
-                    return res.status(404).json({ message: 'Order not found' });
-                }
-            } catch (error) {
-                return res.status(500).json({ message: error.message });
-            }
-
-        case 'DELETE':
-            try {
-                if (!user) {
-                    return res.status(401).json({ message: 'Not authorized' });
-                }
-
-                if (!isAdmin) {
-                    return res.status(403).json({ message: 'Not authorized as admin' });
-                }
-
-                const order = await Order.findById(query.id);
-
-                if (order) {
-                    // Restore stock
-                    for (const item of order.orderItems) {
-                        const product = await Product.findById(item.product);
-                        if (product) {
-                            product.stock += item.qty;
-                            await product.save();
-                        }
-                    }
-
-                    await order.deleteOne();
-                    return res.status(200).json({ message: 'Order removed' });
-                } else {
-                    return res.status(404).json({ message: 'Order not found' });
-                }
-            } catch (error) {
-                return res.status(500).json({ message: error.message });
-            }
-
         default:
             return res.status(405).json({ message: 'Method not allowed' });
     }
-}
+};

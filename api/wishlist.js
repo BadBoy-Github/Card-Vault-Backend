@@ -30,6 +30,27 @@ function corsHeaders(req) {
     };
 }
 
+// Parse URL path to determine route
+const parsePath = (url) => {
+    const path = url.split('?')[0];
+    const parts = path.split('/').filter(Boolean);
+
+    // /api/wishlist/add or /wishlist/add
+    if (parts.includes('add')) {
+        return { action: 'add' };
+    }
+
+    // /api/wishlist/remove/123 or /wishlist/remove/123
+    if (parts.includes('remove')) {
+        const removeIndex = parts.indexOf('remove');
+        if (removeIndex < parts.length - 1) {
+            return { action: 'remove', productId: parts[removeIndex + 1] };
+        }
+    }
+
+    return { action: 'wishlist' };
+};
+
 module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
@@ -44,13 +65,81 @@ module.exports = async function handler(req, res) {
 
     await connectDB();
 
-    const { method, query, body } = req;
+    const { method, body, query } = req;
     const user = await getUserFromToken(req);
+    const { action, productId: pathProductId } = parsePath(req.url);
 
     if (!user) {
         return res.status(401).json({ message: 'Not authorized' });
     }
 
+    // Handle add route
+    if (action === 'add') {
+        if (method !== 'POST') {
+            return res.status(405).json({ message: 'Method not allowed' });
+        }
+        try {
+            const { productId } = body;
+
+            // Check if product exists
+            const product = await Product.findOne({ id: productId });
+            if (!product) {
+                return res.status(404).json({ message: 'Product not found' });
+            }
+
+            let wishlist = await Wishlist.findOne({ user: user._id });
+
+            if (!wishlist) {
+                wishlist = await Wishlist.create({ user: user._id, products: [] });
+            }
+
+            // Check if product already in wishlist
+            const productExists = wishlist.products.find(
+                p => p.product.toString() === product._id.toString()
+            );
+
+            if (productExists) {
+                return res.status(400).json({ message: 'Product already in wishlist' });
+            }
+
+            wishlist.products.push({ product: product._id });
+            await wishlist.save();
+
+            const updatedWishlist = await Wishlist.findById(wishlist._id).populate('products.product');
+            return res.status(200).json(updatedWishlist);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    // Handle remove route
+    if (action === 'remove') {
+        if (method !== 'DELETE') {
+            return res.status(405).json({ message: 'Method not allowed' });
+        }
+        try {
+            const productId = pathProductId;
+
+            const wishlist = await Wishlist.findOne({ user: user._id });
+
+            if (!wishlist) {
+                return res.status(404).json({ message: 'Wishlist not found' });
+            }
+
+            wishlist.products = wishlist.products.filter(
+                p => p.product.toString() !== productId
+            );
+
+            await wishlist.save();
+
+            const updatedWishlist = await Wishlist.findById(wishlist._id).populate('products.product');
+            return res.status(200).json(updatedWishlist);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    // Handle main wishlist route
     switch (method) {
         case 'GET':
             try {
@@ -89,7 +178,7 @@ module.exports = async function handler(req, res) {
 
         case 'POST':
             try {
-                // Add to wishlist
+                // Add to wishlist (alternative endpoint)
                 const { productId } = body;
 
                 let wishlist = await Wishlist.findOne({ user: user._id });
@@ -118,7 +207,7 @@ module.exports = async function handler(req, res) {
 
         case 'DELETE':
             try {
-                // Remove from wishlist
+                // Remove from wishlist (alternative endpoint)
                 const { productId } = query;
 
                 const wishlist = await Wishlist.findOne({ user: user._id });
@@ -142,4 +231,4 @@ module.exports = async function handler(req, res) {
         default:
             return res.status(405).json({ message: 'Method not allowed' });
     }
-}
+};

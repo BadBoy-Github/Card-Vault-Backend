@@ -1,6 +1,7 @@
 const connectDB = require('./_lib/db');
 const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
+const User = require('./_models/User');
 
 // Helper to get user from token
 const getUserFromToken = (req) => {
@@ -28,6 +29,17 @@ function corsHeaders(req) {
     };
 }
 
+// Extract product ID from URL path
+const getProductIdFromPath = (url) => {
+    const path = url.split('?')[0];
+    const parts = path.split('/').filter(Boolean);
+    // Path is like /api/products/123 or /products/123
+    if (parts.length >= 3 && parts[parts.length - 1] !== 'products') {
+        return parts[parts.length - 1];
+    }
+    return null;
+};
+
 module.exports = async function handler(req, res) {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
@@ -45,12 +57,15 @@ module.exports = async function handler(req, res) {
     const { method, query, body } = req;
     const tokenUser = getUserFromToken(req);
 
+    // Get product ID from path or query
+    const productId = getProductIdFromPath(req.url) || query.id;
+
     switch (method) {
         case 'GET':
             try {
                 // Get single product by ID or all products
-                if (query.id) {
-                    const product = await Product.findOne({ id: query.id });
+                if (productId) {
+                    const product = await Product.findOne({ id: productId });
                     if (product) {
                         return res.status(200).json(product);
                     } else {
@@ -70,7 +85,6 @@ module.exports = async function handler(req, res) {
                 if (!tokenUser) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                const User = require('./_models/User');
                 const user = await User.findById(tokenUser.id);
                 if (!user || user.role !== 'admin') {
                     return res.status(401).json({ message: 'Not authorized as admin' });
@@ -117,13 +131,12 @@ module.exports = async function handler(req, res) {
                 if (!tokenUser) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                const User = require('./_models/User');
                 const user = await User.findById(tokenUser.id);
                 if (!user || user.role !== 'admin') {
                     return res.status(401).json({ message: 'Not authorized as admin' });
                 }
 
-                const product = await Product.findOne({ id: query.id });
+                const product = await Product.findOne({ id: productId });
                 if (product) {
                     product.brand = body.brand || product.brand;
                     product.name = body.name || product.name;
@@ -134,8 +147,8 @@ module.exports = async function handler(req, res) {
                     product.description = body.description || product.description;
                     product.price = body.price || product.price;
                     product.validityEndDateTime = body.validityEndDateTime || product.validityEndDateTime;
-                    product.stock = body.stock || product.stock;
-                    product.popular = body.popular || product.popular;
+                    product.stock = body.stock !== undefined ? body.stock : product.stock;
+                    product.popular = body.popular !== undefined ? body.popular : product.popular;
                     product.inStock = body.stock > 0;
 
                     const updatedProduct = await product.save();
@@ -152,13 +165,12 @@ module.exports = async function handler(req, res) {
                 if (!tokenUser) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                const User = require('./_models/User');
                 const user = await User.findById(tokenUser.id);
                 if (!user || user.role !== 'admin') {
                     return res.status(401).json({ message: 'Not authorized as admin' });
                 }
 
-                const result = await Product.deleteOne({ id: query.id });
+                const result = await Product.deleteOne({ id: productId });
                 if (result.deletedCount > 0) {
                     return res.status(200).json({ message: 'Product removed' });
                 } else {
@@ -171,4 +183,4 @@ module.exports = async function handler(req, res) {
         default:
             return res.status(405).json({ message: 'Method not allowed' });
     }
-}
+};
