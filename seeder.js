@@ -51,18 +51,6 @@ const seedDB = async () => {
         await Product.insertMany(initialProducts);
         console.log('Products seeded successfully');
 
-        // Create default admin if not exists
-        const adminEmail = 'admin@cardvault.com';
-        const adminExists = await User.findOne({ email: adminEmail });
-        if (!adminExists) {
-            await User.create({
-                name: 'Admin User',
-                email: adminEmail,
-                password: 'admin123',
-                role: 'admin'
-            });
-            console.log('Admin user created');
-        }
 
         process.exit();
     } catch (err) {
