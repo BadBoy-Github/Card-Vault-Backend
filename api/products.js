@@ -3,6 +3,37 @@ const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
 const User = require('./_models/User');
 
+// Generate a 9-character alphanumeric ID with uppercase, lowercase, and numbers
+const generateProductId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    for (let i = 0; i < 9; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+};
+
+// Generate unique product ID by checking database
+const generateUniqueProductId = async () => {
+    let id;
+    let exists = true;
+    let attempts = 0;
+    const maxAttempts = 100; // Safety limit
+
+    while (exists && attempts < maxAttempts) {
+        id = generateProductId();
+        const existingProduct = await Product.findOne({ id });
+        exists = !!existingProduct;
+        attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+        throw new Error('Unable to generate unique product ID after maximum attempts');
+    }
+
+    return id;
+};
+
 // Helper to get user from token
 const getUserFromToken = (req) => {
     let user = null;
@@ -60,6 +91,16 @@ module.exports = async function handler(req, res) {
     // Get product ID from path or query
     const productId = getProductIdFromPath(req.url) || query.id;
 
+    // Check if this is a request for a new product ID preview
+    if (method === 'GET' && query.generateId === 'true') {
+        try {
+            const newId = await generateUniqueProductId();
+            return res.status(200).json({ id: newId });
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
     switch (method) {
         case 'GET':
             try {
@@ -91,7 +132,6 @@ module.exports = async function handler(req, res) {
                 }
 
                 const {
-                    id,
                     brand,
                     name,
                     denomination,
@@ -105,8 +145,11 @@ module.exports = async function handler(req, res) {
                     popular,
                 } = body;
 
+                // Generate unique product ID
+                const productId = await generateUniqueProductId();
+
                 const product = new Product({
-                    id,
+                    id: productId,
                     brand,
                     name,
                     denomination,

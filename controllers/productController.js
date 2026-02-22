@@ -1,10 +1,47 @@
 const Product = require('../models/Product');
 
+// Generate a 9-character alphanumeric ID with uppercase, lowercase, and numbers
+const generateProductId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    for (let i = 0; i < 9; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+};
+
+// Generate unique product ID by checking database
+const generateUniqueProductId = async () => {
+    let id;
+    let exists = true;
+    let attempts = 0;
+    const maxAttempts = 100; // Safety limit
+
+    while (exists && attempts < maxAttempts) {
+        id = generateProductId();
+        const existingProduct = await Product.findOne({ id });
+        exists = !!existingProduct;
+        attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+        throw new Error('Unable to generate unique product ID after maximum attempts');
+    }
+
+    return id;
+};
+
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Public
 const getProducts = async (req, res) => {
     try {
+        // Check if this is a request for a new product ID preview
+        if (req.query.generateId === 'true') {
+            const newId = await generateUniqueProductId();
+            return res.json({ id: newId });
+        }
+
         const products = await Product.find({});
         res.json(products);
     } catch (error) {
@@ -35,7 +72,6 @@ const getProductById = async (req, res) => {
 const createProduct = async (req, res) => {
     try {
         const {
-            id,
             brand,
             name,
             denomination,
@@ -49,8 +85,11 @@ const createProduct = async (req, res) => {
             popular,
         } = req.body;
 
+        // Generate unique product ID
+        const productId = await generateUniqueProductId();
+
         const product = new Product({
-            id,
+            id: productId,
             brand,
             name,
             denomination,
