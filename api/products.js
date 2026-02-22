@@ -135,7 +135,6 @@ module.exports = async function handler(req, res) {
                     brand,
                     name,
                     denomination,
-                    value,
                     category,
                     image,
                     description,
@@ -153,7 +152,7 @@ module.exports = async function handler(req, res) {
                     brand,
                     name,
                     denomination,
-                    value,
+                    value: price, // Use price as value
                     category,
                     image,
                     description,

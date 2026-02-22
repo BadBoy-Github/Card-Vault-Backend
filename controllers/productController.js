@@ -75,7 +75,6 @@ const createProduct = async (req, res) => {
             brand,
             name,
             denomination,
-            value,
             category,
             image,
             description,
@@ -93,7 +92,7 @@ const createProduct = async (req, res) => {
             brand,
             name,
             denomination,
-            value,
+            value: price, // Use price as value
             category,
             image,
             description,
