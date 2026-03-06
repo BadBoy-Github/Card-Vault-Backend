@@ -25,6 +25,32 @@ const orderSchema = new mongoose.Schema({
         enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
         default: 'pending',
     },
+    // Payment fields
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'awaiting_verification', 'verified', 'failed'],
+        default: 'pending',
+    },
+    utrNumber: {
+        type: String,
+        default: null,
+    },
+    paymentAmount: {
+        type: Number,
+        default: null,
+    },
+    paymentMethod: {
+        type: String,
+        default: 'UPI',
+    },
+    paymentSubmittedAt: {
+        type: Date,
+        default: null,
+    },
+    verifiedAt: {
+        type: Date,
+        default: null,
+    },
     totalPrice: {
         type: Number,
         required: true,

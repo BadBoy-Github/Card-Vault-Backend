@@ -40,6 +40,16 @@ const parsePath = (url) => {
         return { action: 'myorders' };
     }
 
+    // /api/orders/123/submit-utr or /orders/123/submit-utr
+    if (parts.length >= 4 && parts[parts.length - 1] === 'submit-utr') {
+        return { action: 'submit-utr', id: parts[parts.length - 2] };
+    }
+
+    // /api/orders/123/verify-payment or /orders/123/verify-payment
+    if (parts.length >= 4 && parts[parts.length - 1] === 'verify-payment') {
+        return { action: 'verify-payment', id: parts[parts.length - 2] };
+    }
+
     // /api/orders/123/status or /orders/123/status
     if (parts.length >= 4 && parts[parts.length - 1] === 'status') {
         return { action: 'status', id: parts[parts.length - 2] };
@@ -103,6 +113,100 @@ module.exports = async function handler(req, res) {
                     return res.status(200).json(order);
                 }
                 return res.status(404).json({ message: 'Order not found' });
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+        }
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
+
+    // Handle submit-utr route - User submits UTR after payment
+    if (action === 'submit-utr') {
+        if (!user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+        if (method === 'POST') {
+            try {
+                const { utrNumber, paymentAmount } = body;
+
+                if (!utrNumber) {
+                    return res.status(400).json({ message: 'UTR Number is required' });
+                }
+
+                const order = await Order.findById(id);
+
+                if (!order) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                // Check if user owns the order
+                if (order.user.toString() !== user._id.toString()) {
+                    return res.status(403).json({ message: 'Not authorized' });
+                }
+
+                // Check if already submitted
+                if (order.paymentStatus !== 'pending') {
+                    return res.status(400).json({ message: 'UTR already submitted for this order' });
+                }
+
+                // REDUCE STOCK NOW - Only after UTR is submitted
+                for (const item of order.orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock -= item.qty;
+                        await product.save();
+                    }
+                }
+
+                // Update order with UTR details
+                order.utrNumber = utrNumber;
+                order.paymentAmount = paymentAmount || order.totalPrice;
+                order.paymentStatus = 'awaiting_verification';
+                order.paymentSubmittedAt = new Date();
+
+                await order.save();
+                return res.status(200).json(order);
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+        }
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
+
+    // Handle verify-payment route - Admin verifies payment
+    if (action === 'verify-payment') {
+        if (!user || !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized as admin' });
+        }
+        if (method === 'PUT') {
+            try {
+                const { verified, notes, paymentStatus } = body;
+
+                const order = await Order.findById(id);
+
+                if (!order) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                // If paymentStatus is explicitly provided, use it
+                if (paymentStatus) {
+                    order.paymentStatus = paymentStatus;
+                    if (paymentStatus === 'verified') {
+                        order.status = 'processing';
+                        order.verifiedAt = new Date();
+                    } else if (paymentStatus === 'failed') {
+                        order.status = 'cancelled';
+                    }
+                } else if (verified) {
+                    order.paymentStatus = 'verified';
+                    order.status = 'processing'; // Auto-update order status to processing
+                    order.verifiedAt = new Date();
+                } else {
+                    order.paymentStatus = 'failed';
+                }
+
+                await order.save();
+                return res.status(200).json(order);
             } catch (error) {
                 return res.status(500).json({ message: error.message });
             }
@@ -197,13 +301,14 @@ module.exports = async function handler(req, res) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
 
-                const { orderItems, totalPrice } = body;
+                const { orderItems, totalPrice, user: orderUser } = body;
 
                 if (!orderItems || orderItems.length === 0) {
                     return res.status(400).json({ message: 'No order items' });
                 }
 
-                // Check stock and update
+                // Just check stock availability (don't reduce yet)
+                // Stock will be reduced only after payment UTR is submitted
                 for (const item of orderItems) {
                     const product = await Product.findById(item.product);
                     if (!product) {
@@ -212,14 +317,27 @@ module.exports = async function handler(req, res) {
                     if (product.stock < item.qty) {
                         return res.status(400).json({ message: `Insufficient stock for ${item.name}` });
                     }
-                    product.stock -= item.qty;
-                    await product.save();
                 }
 
+                // Determine the user for this order
+                // Admin can create order for themselves or for another user
+                // Regular users can only create orders for themselves
+                let orderUserId = user._id;
+                if (isAdmin && orderUser) {
+                    // Admin creating order for another user
+                    orderUserId = orderUser;
+                } else if (!isAdmin) {
+                    // Regular user - must be their own user ID
+                    orderUserId = user._id;
+                }
+
+                // Create order with 'pending' payment status - no stock reduced yet
                 const order = new Order({
                     orderItems,
-                    user: user._id,
+                    user: orderUserId,
                     totalPrice,
+                    paymentStatus: 'pending', // Payment not started yet
+                    status: body.status || 'pending', // Order status
                 });
 
                 const createdOrder = await order.save();

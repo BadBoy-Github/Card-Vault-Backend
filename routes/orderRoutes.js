@@ -8,6 +8,8 @@ const {
     updateOrderStatus,
     updateOrder,
     deleteOrder,
+    submitUTR,
+    verifyPayment,
 } = require('../controllers/orderController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -19,5 +21,7 @@ router
     .put(protect, admin, updateOrder)
     .delete(protect, admin, deleteOrder);
 router.route('/:id/status').put(protect, admin, updateOrderStatus);
+router.route('/:id/verify-payment').put(protect, admin, verifyPayment);
+router.route('/:id/submit-utr').post(protect, submitUTR);
 
 module.exports = router;

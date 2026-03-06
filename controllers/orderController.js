@@ -4,7 +4,8 @@ const Order = require('../models/Order');
 // @route   POST /api/orders
 // @access  Private
 const addOrderItems = async (req, res) => {
-    const { orderItems, totalPrice, user: userId } = req.body;
+    const { orderItems, totalPrice, user: userId, createOnly } = req.body;
+    const isAdmin = req.user.role === 'admin';
 
     if (orderItems && orderItems.length === 0) {
         return res.status(400).json({ message: 'No order items' });
@@ -12,24 +13,43 @@ const addOrderItems = async (req, res) => {
         try {
             const Product = require('../models/Product');
 
-            // Check stock and update
-            for (const item of orderItems) {
-                const product = await Product.findById(item.product);
-                if (!product) {
-                    return res.status(404).json({ message: `Product ${item.name} not found` });
+            // If createOnly is true, just check availability without reducing stock
+            // This is used when creating order from payment page after UTR submission
+            if (!createOnly) {
+                // Check stock availability
+                for (const item of orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (!product) {
+                        return res.status(404).json({ message: `Product ${item.name} not found` });
+                    }
+                    if (product.stock < item.qty) {
+                        return res.status(400).json({ message: `Insufficient stock for ${item.name}` });
+                    }
                 }
-                if (product.stock < item.qty) {
-                    return res.status(400).json({ message: `Insufficient stock for ${item.name}` });
-                }
-                product.stock -= item.qty;
-                await product.save();
             }
 
             const order = new Order({
                 orderItems,
                 user: userId || req.user._id,
                 totalPrice,
+                paymentStatus: 'pending',
             });
+
+            // For admin-created orders, reduce stock immediately
+            // For user-created orders (createOnly=true), stock is reduced after UTR submission
+            if (isAdmin) {
+                for (const item of orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock -= item.qty;
+                        await product.save();
+                    }
+                }
+                order.paymentStatus = 'verified'; // Admin orders are considered paid
+                order.status = 'delivered'; // Admin orders are delivered directly
+                // Generate a placeholder UTR for admin orders
+                order.utrNumber = 'ADMIN' + Date.now().toString().slice(-8);
+            }
 
             const createdOrder = await order.save();
             res.status(201).json(createdOrder);
@@ -182,12 +202,14 @@ const deleteOrder = async (req, res) => {
         if (order) {
             const Product = require('../models/Product');
 
-            // Restore stock
-            for (const item of order.orderItems) {
-                const product = await Product.findById(item.product);
-                if (product) {
-                    product.stock += item.qty;
-                    await product.save();
+            // Restore stock only if payment was verified
+            if (order.paymentStatus === 'verified') {
+                for (const item of order.orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock += item.qty;
+                        await product.save();
+                    }
                 }
             }
 
@@ -201,6 +223,105 @@ const deleteOrder = async (req, res) => {
     }
 };
 
+// @desc    Submit UTR for payment
+// @route   POST /api/orders/:id/submit-utr
+// @access  Private
+const submitUTR = async (req, res) => {
+    try {
+        const { utrNumber, paymentAmount } = req.body;
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Check if user owns the order
+        if (order.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        // Check if already submitted
+        if (order.paymentStatus !== 'pending') {
+            return res.status(400).json({ message: 'UTR already submitted for this order' });
+        }
+
+        // REDUCE STOCK NOW - Only after UTR is submitted
+        const Product = require('../models/Product');
+        for (const item of order.orderItems) {
+            const product = await Product.findById(item.product);
+            if (product) {
+                product.stock -= item.qty;
+                await product.save();
+            }
+        }
+
+        // Update order with UTR details
+        order.utrNumber = utrNumber;
+        order.paymentAmount = paymentAmount || order.totalPrice;
+        order.paymentStatus = 'awaiting_verification';
+        order.paymentSubmittedAt = new Date();
+
+        const updatedOrder = await order.save();
+        res.json(updatedOrder);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Verify payment
+// @route   PUT /api/orders/:id/verify-payment
+// @access  Private/Admin
+const verifyPayment = async (req, res) => {
+    try {
+        const { verified, paymentStatus } = req.body;
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // If paymentStatus is explicitly provided, use it
+        if (paymentStatus) {
+            order.paymentStatus = paymentStatus;
+            if (paymentStatus === 'verified') {
+                order.status = 'processing';
+                order.verifiedAt = new Date();
+            } else if (paymentStatus === 'failed') {
+                order.status = 'cancelled';
+                // Restore stock if payment failed
+                const Product = require('../models/Product');
+                for (const item of order.orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock += item.qty;
+                        await product.save();
+                    }
+                }
+            }
+        } else if (verified) {
+            order.paymentStatus = 'verified';
+            order.status = 'processing';
+            order.verifiedAt = new Date();
+        } else {
+            order.paymentStatus = 'failed';
+            // Restore stock if payment failed
+            const Product = require('../models/Product');
+            for (const item of order.orderItems) {
+                const product = await Product.findById(item.product);
+                if (product) {
+                    product.stock += item.qty;
+                    await product.save();
+                }
+            }
+        }
+
+        const updatedOrder = await order.save();
+        res.json(updatedOrder);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     addOrderItems,
     getOrderById,
@@ -209,4 +330,6 @@ module.exports = {
     updateOrderStatus,
     updateOrder,
     deleteOrder,
+    submitUTR,
+    verifyPayment,
 };

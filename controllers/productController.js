@@ -126,7 +126,7 @@ const updateProduct = async (req, res) => {
             product.description = req.body.description || product.description;
             product.price = req.body.price || product.price;
             product.validityEndDateTime = req.body.validityEndDateTime || product.validityEndDateTime;
-            product.stock = req.body.stock || product.stock;
+            product.stock = req.body.stock !== undefined ? req.body.stock : product.stock;
             product.popular = req.body.popular || product.popular;
             product.inStock = req.body.stock > 0;
 

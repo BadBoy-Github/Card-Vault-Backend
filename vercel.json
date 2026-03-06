@@ -25,12 +25,24 @@
             "destination": "/api/orders"
         },
         {
+            "source": "/api/orders/:id/submit-utr",
+            "destination": "/api/orders"
+        },
+        {
+            "source": "/api/orders/:id/verify-payment",
+            "destination": "/api/orders"
+        },
+        {
             "source": "/api/orders/:id/status",
             "destination": "/api/orders"
         },
         {
             "source": "/api/orders/:id",
             "destination": "/api/orders"
+        },
+        {
+            "source": "/api/payment/config",
+            "destination": "/api/payment"
         },
         {
             "source": "/api/wishlist/add",
