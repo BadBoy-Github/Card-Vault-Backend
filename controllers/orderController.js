@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const mongoose = require('mongoose');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -227,31 +228,49 @@ const deleteOrder = async (req, res) => {
 // @route   POST /api/orders/:id/submit-utr
 // @access  Private
 const submitUTR = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { utrNumber, paymentAmount } = req.body;
-        const order = await Order.findById(req.params.id);
+        const order = await Order.findById(req.params.id).session(session);
 
         if (!order) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(404).json({ message: 'Order not found' });
         }
 
         // Check if user owns the order
         if (order.user.toString() !== req.user._id.toString()) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(403).json({ message: 'Not authorized' });
         }
 
         // Check if already submitted
         if (order.paymentStatus !== 'pending') {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ message: 'UTR already submitted for this order' });
         }
 
-        // REDUCE STOCK NOW - Only after UTR is submitted
+        // REDUCE STOCK NOW - Use transaction to prevent overselling
         const Product = require('../models/Product');
         for (const item of order.orderItems) {
-            const product = await Product.findById(item.product);
-            if (product) {
-                product.stock -= item.qty;
-                await product.save();
+            // Use findOneAndUpdate with atomic operation to lock stock
+            const product = await Product.findOneAndUpdate(
+                { _id: item.product, stock: { $gte: item.qty } },
+                { $inc: { stock: -item.qty } },
+                { new: true, session }
+            );
+
+            if (!product) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({
+                    message: `Insufficient stock for ${item.name}. Please reorder with available quantity.`
+                });
             }
         }
 
@@ -261,9 +280,15 @@ const submitUTR = async (req, res) => {
         order.paymentStatus = 'awaiting_verification';
         order.paymentSubmittedAt = new Date();
 
-        const updatedOrder = await order.save();
+        const updatedOrder = await order.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
         res.json(updatedOrder);
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         res.status(500).json({ message: error.message });
     }
 };
@@ -322,6 +347,60 @@ const verifyPayment = async (req, res) => {
     }
 };
 
+// @desc    Cancel order (user can cancel within 10 minutes)
+// @route   POST /api/orders/:id/cancel
+// @access  Private
+const cancelOrder = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Check if user owns the order
+        if (order.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        // Only allow cancellation if payment is still pending or awaiting verification
+        if (order.paymentStatus !== 'pending' && order.paymentStatus !== 'awaiting_verification') {
+            return res.status(400).json({ message: 'Cannot cancel order at this stage' });
+        }
+
+        // Check if within 10 minute window
+        const orderCreatedAt = new Date(order.createdAt);
+        const now = new Date();
+        const minutesSinceOrder = (now - orderCreatedAt) / (1000 * 60);
+
+        if (minutesSinceOrder > 10) {
+            return res.status(400).json({ message: 'Order can only be cancelled within 10 minutes of placement' });
+        }
+
+        // Restore stock if it was already reduced (when status is awaiting_verification)
+        if (order.paymentStatus === 'awaiting_verification') {
+            const Product = require('../models/Product');
+            for (const item of order.orderItems) {
+                const product = await Product.findById(item.product);
+                if (product) {
+                    product.stock += item.qty;
+                    await product.save();
+                }
+            }
+        }
+
+        // Update order status to cancelled
+        order.status = 'cancelled';
+        order.cancelledAt = new Date();
+        order.cancellationReason = 'User cancelled within 10 minute window';
+
+        const updatedOrder = await order.save();
+        res.json(updatedOrder);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     addOrderItems,
     getOrderById,
@@ -332,4 +411,5 @@ module.exports = {
     deleteOrder,
     submitUTR,
     verifyPayment,
+    cancelOrder,
 };

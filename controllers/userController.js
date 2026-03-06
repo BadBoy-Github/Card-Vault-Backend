@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -7,6 +8,77 @@ const getUsers = async (req, res) => {
     try {
         const users = await User.find({});
         res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Update user profile (own profile)
+// @route   PUT /api/users/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            if (req.body.name) {
+                user.name = req.body.name;
+            }
+            if (req.body.email) {
+                // Check if email is already in use by another user
+                const existingUser = await User.findOne({ email: req.body.email, _id: { $ne: user._id } });
+                if (existingUser) {
+                    return res.status(400).json({ message: 'Email already in use' });
+                }
+                user.email = req.body.email;
+            }
+            const updatedUser = await user.save();
+            res.json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                role: updatedUser.role,
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Change password
+// @route   PUT /api/users/change-password
+// @access  Private
+const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            // Check current password
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password is incorrect' });
+            }
+
+            // Validate password strength
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+            if (!passwordRegex.test(newPassword)) {
+                return res.status(400).json({ 
+                    message: 'Password must be at least 8 characters with uppercase, lowercase, and number' 
+                });
+            }
+
+            // Hash new password
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(newPassword, salt);
+            await user.save();
+
+            res.json({ message: 'Password updated successfully' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -63,4 +135,6 @@ module.exports = {
     getUsers,
     updateUser,
     deleteUser,
+    updateProfile,
+    changePassword,
 };

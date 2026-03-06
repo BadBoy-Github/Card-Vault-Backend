@@ -42,6 +42,48 @@ const getProducts = async (req, res) => {
             return res.json({ id: newId });
         }
 
+        // Check if pagination is requested
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+
+        // If page and limit are provided, return paginated response
+        if (req.query.page || req.query.limit) {
+            const skip = (page - 1) * limit;
+
+            // Build search query
+            const searchQuery = req.query.search || '';
+            let query = {};
+
+            // If search query exists, search in name, brand, description, category
+            if (searchQuery) {
+                query = {
+                    $or: [
+                        { name: { $regex: searchQuery, $options: 'i' } },
+                        { brand: { $regex: searchQuery, $options: 'i' } },
+                        { description: { $regex: searchQuery, $options: 'i' } },
+                        { category: { $regex: searchQuery, $options: 'i' } },
+                    ]
+                };
+            }
+
+            // Get total count for pagination
+            const total = await Product.countDocuments(query);
+
+            // Get products with pagination
+            const products = await Product.find(query)
+                .skip(skip)
+                .limit(limit)
+                .sort({ createdAt: -1 });
+
+            return res.json({
+                products,
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+            });
+        }
+
+        // Default: return all products without pagination
         const products = await Product.find({});
         res.json(products);
     } catch (error) {
