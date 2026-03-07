@@ -287,7 +287,7 @@ module.exports = async function handler(req, res) {
                 }
                 // Get all orders (admin only)
                 if (isAdmin) {
-                    const orders = await Order.find({}).populate('user', 'id name').sort({ createdAt: -1 });
+                    const orders = await Order.find({}).populate('user', 'id name email').sort({ createdAt: -1 });
                     return res.status(200).json(orders);
                 }
                 return res.status(403).json({ message: 'Not authorized as admin' });
@@ -301,14 +301,13 @@ module.exports = async function handler(req, res) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
 
-                const { orderItems, totalPrice, user: orderUser } = body;
+                const { orderItems, totalPrice, user: orderUser, utrNumber, paymentAmount, paymentStatus, paymentMethod } = body;
 
                 if (!orderItems || orderItems.length === 0) {
                     return res.status(400).json({ message: 'No order items' });
                 }
 
-                // Just check stock availability (don't reduce yet)
-                // Stock will be reduced only after payment UTR is submitted
+                // Check stock availability
                 for (const item of orderItems) {
                     const product = await Product.findById(item.product);
                     if (!product) {
@@ -331,13 +330,46 @@ module.exports = async function handler(req, res) {
                     orderUserId = user._id;
                 }
 
-                // Create order with 'pending' payment status - no stock reduced yet
+                // Determine payment status
+                // If utrNumber is provided, payment is being submitted along with order
+                const isUTRSubmitted = utrNumber && utrNumber.trim().length > 0;
+
+                // If admin creates order directly (not from user checkout), set payment as verified
+                // Admin manually creating order means payment is already received
+                let finalPaymentStatus;
+                if (isUTRSubmitted) {
+                    finalPaymentStatus = paymentStatus || 'awaiting_verification';
+                } else if (isAdmin) {
+                    // Admin creating order directly - payment already received
+                    finalPaymentStatus = 'verified';
+                } else {
+                    finalPaymentStatus = 'pending';
+                }
+
+                // If UTR is submitted, reduce stock immediately
+                if (isUTRSubmitted) {
+                    for (const item of orderItems) {
+                        const product = await Product.findById(item.product);
+                        if (product) {
+                            product.stock -= item.qty;
+                            await product.save();
+                        }
+                    }
+                }
+
+                // Create order - use provided payment details or defaults
                 const order = new Order({
                     orderItems,
                     user: orderUserId,
                     totalPrice,
-                    paymentStatus: 'pending', // Payment not started yet
-                    status: body.status || 'pending', // Order status
+                    // Use determined payment status
+                    paymentStatus: finalPaymentStatus,
+                    status: body.status || (isUTRSubmitted ? 'processing' : 'processing'),
+                    // Payment details - save if UTR is submitted
+                    utrNumber: utrNumber || null,
+                    paymentAmount: paymentAmount ? parseFloat(paymentAmount) : (totalPrice ? parseFloat(totalPrice) : null),
+                    paymentMethod: paymentMethod || 'UPI',
+                    paymentSubmittedAt: isUTRSubmitted ? new Date() : null,
                 });
 
                 const createdOrder = await order.save();
