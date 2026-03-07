@@ -63,6 +63,10 @@
         {
             "source": "/api/users/:id",
             "destination": "/api/users"
+        },
+        {
+            "source": "/api/email",
+            "destination": "/api/email"
         }
     ]
 }
