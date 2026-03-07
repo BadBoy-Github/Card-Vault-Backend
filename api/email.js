@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
                 }
 
                 const mailOptions = {
-                    from: fromEmail,
+                    from: "Card Vault",
                     to: process.env.DEFAULT_ADMIN_EMAIL || 'elayabarathiedison@gmail.com',
                     subject: `[${category}] ${subject} - Contact Form`,
                     html: `
