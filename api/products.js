@@ -113,7 +113,25 @@ module.exports = async function handler(req, res) {
                         return res.status(404).json({ message: 'Product not found' });
                     }
                 } else {
-                    const products = await Product.find({});
+                    // Check for search query
+                    const searchQuery = query.search;
+                    let products;
+
+                    if (searchQuery) {
+                        // Search by name, brand, or category
+                        const searchRegex = new RegExp(searchQuery, 'i');
+                        products = await Product.find({
+                            $or: [
+                                { name: searchRegex },
+                                { brand: searchRegex },
+                                { category: searchRegex },
+                                { description: searchRegex }
+                            ]
+                        });
+                    } else {
+                        products = await Product.find({});
+                    }
+
                     return res.status(200).json(products);
                 }
             } catch (error) {
