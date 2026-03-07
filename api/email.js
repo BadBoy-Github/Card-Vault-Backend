@@ -150,16 +150,59 @@ module.exports = async function handler(req, res) {
                     to: toEmail,
                     subject: 'Password Reset OTP - Card Vault',
                     html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h2 style="color: #333;">Password Reset Request</h2>
-                            <p>You requested to reset your password for your Card Vault account.</p>
-                            <div style="background-color: #f5f5f5; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
-                                <p style="margin: 0; color: #666; font-size: 14px;">Your OTP is:</p>
-                                <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px;">${otp}</p>
-                            </div>
-                            <p style="color: #666; font-size: 14px;">This OTP will expire in 3 minutes.</p>
-                            <p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't request this, please ignore this email.</p>
-                        </div>
+                        <div style="font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5; padding:30px 10px;">
+
+  <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:10px; overflow:hidden; border:1px solid #e5e5e5;">
+
+    <!-- Header -->
+    <div style="padding:26px 28px; border-bottom:1px solid #e5e5e5; text-align:center;">
+      <div style="font-size:12px; letter-spacing:2px; color:#777;">CARD VAULT</div>
+      <h2 style="margin:8px 0 4px 0; font-weight:600; color:#222;">Password Reset Request</h2>
+      <div style="font-size:13px; color:#777;">Secure verification required</div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding:28px; color:#333; font-size:14px; line-height:1.6;">
+
+      <p style="margin-top:0;">
+        You requested to reset your password for your <strong>Card Vault</strong> account.
+        Please use the One-Time Password (OTP) below to proceed.
+      </p>
+
+      <!-- OTP Box -->
+      <div style="background:#fafafa; border:1px solid #e5e5e5; border-radius:8px; padding:24px; text-align:center; margin:25px 0;">
+
+        <div style="font-size:12px; letter-spacing:1px; color:#777; margin-bottom:6px;">
+          ONE-TIME PASSWORD
+        </div>
+
+        <div style="font-size:34px; font-weight:600; letter-spacing:6px; color:#222;">
+          ${otp}
+        </div>
+
+      </div>
+
+      <p style="color:#555; font-size:13px;">
+        This OTP will expire in <strong>3 minutes</strong>.
+      </p>
+
+      <p style="color:#777; font-size:13px;">
+        If you did not request this password reset, you can safely ignore this email.
+        Your account will remain secure.
+      </p>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:18px; border-top:1px solid #e5e5e5; text-align:center; font-size:12px; color:#777;">
+      <div style="font-weight:600; color:#333;">Card Vault</div>
+      Security Notification<br>
+      This email was automatically generated.
+    </div>
+
+  </div>
+
+</div>
                     `,
                 };
 
