@@ -1,6 +1,7 @@
 const connectDB = require('./_lib/db');
 const jwt = require('jsonwebtoken');
 const User = require('./_models/User');
+const bcrypt = require('bcryptjs');
 
 // Generate JWT
 const generateToken = (id) => {
@@ -56,11 +57,38 @@ module.exports = async function handler(req, res) {
     const path = req.url.split('?')[0];
     const isLogin = path.endsWith('/login');
     const isRegister = path.endsWith('/register');
+    const isCheckEmail = path.endsWith('/check-email');
+    const isResetPassword = path.endsWith('/reset-password');
 
     switch (method) {
         case 'POST':
             try {
                 const { name, email, password } = body;
+
+                // Check if email exists
+                if (isCheckEmail) {
+                    const { email } = body;
+                    if (!email) {
+                        return res.status(400).json({ message: 'Email is required' });
+                    }
+                    const userExists = await User.findOne({ email });
+                    return res.status(200).json({ exists: !!userExists });
+                }
+
+                // Reset password
+                if (isResetPassword) {
+                    const { email, newPassword } = body;
+                    if (!email || !newPassword) {
+                        return res.status(400).json({ message: 'Email and new password are required' });
+                    }
+                    const user = await User.findOne({ email });
+                    if (!user) {
+                        return res.status(404).json({ message: 'User not found' });
+                    }
+                    user.password = newPassword;
+                    await user.save();
+                    return res.status(200).json({ message: 'Password updated successfully' });
+                }
 
                 // Register
                 if (isRegister) {
