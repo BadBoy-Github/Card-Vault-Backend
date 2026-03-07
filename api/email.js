@@ -53,31 +53,83 @@ module.exports = async function handler(req, res) {
                     to: process.env.DEFAULT_ADMIN_EMAIL || 'elayabarathiedison@gmail.com',
                     subject: `[${category}] ${subject} - Contact Form`,
                     html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                            <h2 style="color: #333;">New Contact Form Submission</h2>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Name:</td>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${name}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Email:</td>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${email}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Category:</td>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${category}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Subject:</td>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${subject}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Message:</td>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">${message}</td>
-                                </tr>
-                            </table>
-                        </div>
+                        <div style="font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5; padding:30px 10px;">
+
+  <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:10px; overflow:hidden; border:1px solid #e5e5e5;">
+
+    <!-- Header -->
+    <div style="padding:26px 28px; border-bottom:1px solid #e5e5e5; text-align:center;">
+      <div style="font-size:12px; letter-spacing:2px; color:#777;">CARD VAULT</div>
+      <h2 style="margin:8px 0 4px 0; font-weight:600; color:#222;">New Contact Message</h2>
+      <div style="font-size:13px; color:#777;">Someone contacted you from your website</div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding:28px;">
+
+      <table style="width:100%; border-collapse:collapse;">
+
+        <tr>
+          <td style="padding:12px 0; font-weight:600; color:#555; width:35%; border-bottom:1px solid #eee;">
+            Name
+          </td>
+          <td style="padding:12px 0; color:#333; border-bottom:1px solid #eee;">
+            ${name}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+            Email
+          </td>
+          <td style="padding:12px 0; color:#333; border-bottom:1px solid #eee;">
+            ${email}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+            Category
+          </td>
+          <td style="padding:12px 0; color:#333; border-bottom:1px solid #eee;">
+            ${category}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+            Subject
+          </td>
+          <td style="padding:12px 0; color:#333; border-bottom:1px solid #eee;">
+            ${subject}
+          </td>
+        </tr>
+
+      </table>
+
+      <!-- Message -->
+      <div style="margin-top:24px;">
+        <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#777; margin-bottom:10px;">
+          Message
+        </div>
+
+        <div style="background:#fafafa; border:1px solid #e5e5e5; padding:18px; border-radius:6px; line-height:1.6; color:#333;">
+          ${message}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:18px; border-top:1px solid #e5e5e5; text-align:center; font-size:12px; color:#777;">
+      <div style="font-weight:600; color:#333;">Card Vault</div>
+      Contact Form Notification<br>
+      This email was automatically generated.
+    </div>
+
+  </div>
+
+</div>
                     `,
                 };
 
