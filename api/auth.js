@@ -85,9 +85,8 @@ module.exports = async function handler(req, res) {
                     if (!user) {
                         return res.status(404).json({ message: 'User not found' });
                     }
-                    // Hash the new password before saving
-                    const salt = await bcrypt.genSalt(10);
-                    user.password = await bcrypt.hash(newPassword, salt);
+                    // Set password - pre-save hook will hash it
+                    user.password = newPassword;
                     await user.save();
                     return res.status(200).json({ message: 'Password updated successfully' });
                 }
