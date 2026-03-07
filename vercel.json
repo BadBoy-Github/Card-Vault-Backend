@@ -17,6 +17,14 @@
             "destination": "/api/auth"
         },
         {
+            "source": "/api/auth/check-email",
+            "destination": "/api/auth"
+        },
+        {
+            "source": "/api/auth/reset-password",
+            "destination": "/api/auth"
+        },
+        {
             "source": "/api/products/:id",
             "destination": "/api/products"
         },
