@@ -55,6 +55,11 @@ const parsePath = (url) => {
         return { action: 'status', id: parts[parts.length - 2] };
     }
 
+    // /api/orders/123/send-giftcard or /orders/123/send-giftcard
+    if (parts.length >= 4 && parts[parts.length - 1] === 'send-giftcard') {
+        return { action: 'send-giftcard', id: parts[parts.length - 2] };
+    }
+
     // /api/orders/123 or /orders/123
     if (parts.length >= 3 && parts[parts.length - 1] !== 'orders') {
         return { action: 'single', id: parts[parts.length - 1] };
@@ -209,6 +214,203 @@ module.exports = async function handler(req, res) {
                 return res.status(200).json(order);
             } catch (error) {
                 return res.status(500).json({ message: error.message });
+            }
+        }
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
+
+    // Handle send-giftcard route - Admin sends gift card to user
+    if (action === 'send-giftcard') {
+        if (!user || !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized as admin' });
+        }
+        if (method === 'POST') {
+            try {
+                const { cardNumber, pin, expiryDate } = body;
+
+                if (!cardNumber || !pin || !expiryDate) {
+                    return res.status(400).json({ message: 'Card number, PIN, and expiry date are required' });
+                }
+
+                const order = await Order.findById(id).populate('user', 'name email');
+
+                if (!order) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                // Verify order is eligible for gift card sending
+                if (order.paymentStatus !== 'verified') {
+                    return res.status(400).json({ message: 'Payment not verified for this order' });
+                }
+
+                if (order.status !== 'processing') {
+                    return res.status(400).json({ message: 'Order must be in processing status to send gift card' });
+                }
+
+                // Get product name from order
+                const productName = order.orderItems[0]?.name || 'Gift Card';
+
+                // Send email using nodemailer
+                const nodemailer = require('nodemailer');
+                const transporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                    port: process.env.SMTP_PORT || 587,
+                    secure: false,
+                    auth: {
+                        user: process.env.SMTP_USER,
+                        pass: process.env.SMTP_PASS,
+                    },
+                });
+
+                const maskedCard = cardNumber.substring(0, 4) + ' ' + cardNumber.substring(4, 8) + ' ' + cardNumber.substring(8, 12) + ' ' + cardNumber.substring(12, 16);
+
+                const mailOptions = {
+                    from: "Card Vault <noreply@cardvault.in>",
+                    to: order.user.email,
+                    subject: `🎁 Your Gift Card is Here! - ${productName}`,
+                    html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#0f0f0f;">
+    
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0f0f0f; padding:40px 10px;">
+        <tr>
+            <td align="center">
+                <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px; background:#1a1a1a; border-radius:16px; overflow:hidden; border:1px solid #333;">
+                    
+                    <!-- Header with gradient -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:35px 30px; text-align:center;">
+                            <div style="font-size:11px; letter-spacing:3px; color:rgba(255,255,255,0.8); margin-bottom:8px;">CARD VAULT</div>
+                            <h1 style="margin:0; font-size:28px; font-weight:600; color:#ffffff; letter-spacing:-0.5px;">Your Gift Card</h1>
+                            <p style="margin:10px 0 0 0; font-size:14px; color:rgba(255,255,255,0.85);">Premium Digital Gift Card</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding:35px 30px;">
+                            <p style="margin:0 0 25px 0; font-size:15px; color:#e0e0e0; line-height:1.6;">
+                                Dear <strong style="color:#ffffff;">${order.user.name}</strong>,
+                            </p>
+                            
+                            <p style="margin:0 0 25px 0; font-size:15px; color:#e0e0e0; line-height:1.6;">
+                                Thank you for your purchase! Your digital gift card is ready. Please find your card details below.
+                            </p>
+                            
+                            <!-- Product Name Box -->
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#252525; border-radius:12px; margin-bottom:25px;">
+                                <tr>
+                                    <td style="padding:20px; text-align:center;">
+                                        <div style="font-size:12px; letter-spacing:1px; color:#888; margin-bottom:6px;">PRODUCT</div>
+                                        <div style="font-size:20px; font-weight:600; color:#ffffff;">${productName}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Card Details -->
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1e1e1e; border-radius:12px; border:1px solid #333;">
+                                <tr>
+                                    <td style="padding:25px;">
+                                        <div style="font-size:11px; letter-spacing:1px; color:#666; margin-bottom:8px;">CARD NUMBER</div>
+                                        <div style="font-size:22px; font-weight:600; color:#00d4aa; letter-spacing:3px; font-family:'Courier New', monospace;">
+                                            ${maskedCard}
+                                        </div>
+                                        
+                                        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:20px;">
+                                            <tr>
+                                                <td width="50%">
+                                                    <div style="font-size:11px; letter-spacing:1px; color:#666; margin-bottom:4px;">PIN</div>
+                                                    <div style="font-size:18px; font-weight:600; color:#ffffff; letter-spacing:2px;">${pin}</div>
+                                                </td>
+                                                <td width="50%" style="text-align:right;">
+                                                    <div style="font-size:11px; letter-spacing:1px; color:#666; margin-bottom:4px;">EXPIRY DATE</div>
+                                                    <div style="font-size:18px; font-weight:600; color:#888; letter-spacing:1px;">${expiryDate}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Instructions -->
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#252525; border-radius:12px; margin-top:25px;">
+                                <tr>
+                                    <td style="padding:20px;">
+                                        <div style="font-size:12px; letter-spacing:1px; color:#888; margin-bottom:12px; font-weight:600;">HOW TO REDEEM</div>
+                                        <ul style="margin:0; padding-left:18px; color:#aaa; font-size:13px; line-height:1.8;">
+                                            <li>Visit the Card Vault website</li>
+                                            <li>Enter your gift card details during checkout</li>
+                                            <li>The card value will be applied to your order</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Important Notice -->
+                            <div style="margin-top:25px; padding:15px; background:#2a2a2a; border-radius:8px; border-left:3px solid #f59e0b;">
+                                <div style="font-size:12px; color:#f59e0b; font-weight:600; margin-bottom:5px;">⚠️ Important</div>
+                                <div style="font-size:12px; color:#888; line-height:1.5;">
+                                    Please keep your card details secure. Do not share your PIN with anyone. This card is non-refundable and non-transferable.
+                                </div>
+                            </div>
+                            
+                            <!-- Order ID -->
+                            <div style="margin-top:25px; text-align:center;">
+                                <span style="font-size:11px; color:#555;">Order ID: ${order._id}</span>
+                            </div>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#141414; padding:25px 30px; text-align:center; border-top:1px solid #2a2a2a;">
+                            <div style="font-size:16px; font-weight:600; color:#ffffff; margin-bottom:8px;">Card Vault</div>
+                            <div style="font-size:12px; color:#666; line-height:1.6;">
+                                Your Trusted Destination for Premium Gift Cards<br>
+                                <a href="https://cardvault.in" style="color:#667eea; text-decoration:none;">cardvault.in</a>
+                            </div>
+                            <div style="margin-top:15px; font-size:11px; color:#444;">
+                                © ${new Date().getFullYear()} Card Vault. All rights reserved.
+                            </div>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+                <!-- Bottom spacing -->
+                <div style="height:40px;"></div>
+                
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>
+                    `,
+                };
+
+                await transporter.sendMail(mailOptions);
+
+                // Update order status to delivered after sending gift card
+                order.status = 'delivered';
+                order.giftCardSentAt = new Date();
+                order.giftCardDetails = {
+                    cardNumber: cardNumber,
+                    // Don't store PIN in plain text for security
+                    expiryDate: expiryDate,
+                };
+                await order.save();
+
+                return res.status(200).json({ message: 'Gift card sent successfully' });
+            } catch (error) {
+                console.error('Gift card send error:', error);
+                return res.status(500).json({ message: 'Failed to send gift card', error: error.message });
             }
         }
         return res.status(405).json({ message: 'Method not allowed' });
