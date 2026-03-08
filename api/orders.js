@@ -273,124 +273,167 @@ module.exports = async function handler(req, res) {
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#0f0f0f;">
-    
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0f0f0f; padding:40px 10px;">
-        <tr>
-            <td align="center">
-                <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px; background:#1a1a1a; border-radius:16px; overflow:hidden; border:1px solid #333;">
-                    
-                    <!-- Header with gradient -->
-                    <tr>
-                        <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:35px 30px; text-align:center;">
-                            <div style="font-size:11px; letter-spacing:3px; color:rgba(255,255,255,0.8); margin-bottom:8px;">CARD VAULT</div>
-                            <h1 style="margin:0; font-size:28px; font-weight:600; color:#ffffff; letter-spacing:-0.5px;">Your Gift Card</h1>
-                            <p style="margin:10px 0 0 0; font-size:14px; color:rgba(255,255,255,0.85);">Premium Digital Gift Card</p>
-                        </td>
-                    </tr>
-                    
-                    <!-- Main Content -->
-                    <tr>
-                        <td style="padding:35px 30px;">
-                            <p style="margin:0 0 25px 0; font-size:15px; color:#e0e0e0; line-height:1.6;">
-                                Dear <strong style="color:#ffffff;">${order.user.name}</strong>,
-                            </p>
-                            
-                            <p style="margin:0 0 25px 0; font-size:15px; color:#e0e0e0; line-height:1.6;">
-                                Thank you for your purchase! Your digital gift card is ready. Please find your card details below.
-                            </p>
-                            
-                            <!-- Product Name Box -->
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#252525; border-radius:12px; margin-bottom:25px;">
-                                <tr>
-                                    <td style="padding:20px; text-align:center;">
-                                        <div style="font-size:12px; letter-spacing:1px; color:#888; margin-bottom:6px;">PRODUCT</div>
-                                        <div style="font-size:20px; font-weight:600; color:#ffffff;">${productName}</div>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <!-- Card Details -->
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1e1e1e; border-radius:12px; border:1px solid #333;">
-                                <tr>
-                                    <td style="padding:25px;">
-                                        <div style="font-size:11px; letter-spacing:1px; color:#666; margin-bottom:8px;">CARD NUMBER</div>
-                                        <div style="font-size:22px; font-weight:600; color:#00d4aa; letter-spacing:3px; font-family:'Courier New', monospace;">
-                                            ${maskedCard}
-                                        </div>
-                                        
-                                        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:20px;">
-                                            <tr>
-                                                <td width="50%">
-                                                    <div style="font-size:11px; letter-spacing:1px; color:#666; margin-bottom:4px;">PIN</div>
-                                                    <div style="font-size:18px; font-weight:600; color:#ffffff; letter-spacing:2px;">${pin}</div>
-                                                </td>
-                                                <td width="50%" style="text-align:right;">
-                                                    <div style="font-size:11px; letter-spacing:1px; color:#666; margin-bottom:4px;">EXPIRY DATE</div>
-                                                    <div style="font-size:18px; font-weight:600; color:#888; letter-spacing:1px;">${expiryDate}</div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <!-- Instructions -->
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#252525; border-radius:12px; margin-top:25px;">
-                                <tr>
-                                    <td style="padding:20px;">
-                                        <div style="font-size:12px; letter-spacing:1px; color:#888; margin-bottom:12px; font-weight:600;">HOW TO REDEEM</div>
-                                        <ul style="margin:0; padding-left:18px; color:#aaa; font-size:13px; line-height:1.8;">
-                                            <li>Visit the Card Vault website</li>
-                                            <li>Enter your gift card details during checkout</li>
-                                            <li>The card value will be applied to your order</li>
-                                        </ul>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <!-- Important Notice -->
-                            <div style="margin-top:25px; padding:15px; background:#2a2a2a; border-radius:8px; border-left:3px solid #f59e0b;">
-                                <div style="font-size:12px; color:#f59e0b; font-weight:600; margin-bottom:5px;">⚠️ Important</div>
-                                <div style="font-size:12px; color:#888; line-height:1.5;">
-                                    Please keep your card details secure. Do not share your PIN with anyone. This card is non-refundable and non-transferable.
-                                </div>
-                            </div>
-                            
-                            <!-- Order ID -->
-                            <div style="margin-top:25px; text-align:center;">
-                                <span style="font-size:11px; color:#555;">Order ID: ${order._id}</span>
-                            </div>
-                            
-                        </td>
-                    </tr>
-                    
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background:#141414; padding:25px 30px; text-align:center; border-top:1px solid #2a2a2a;">
-                            <div style="font-size:16px; font-weight:600; color:#ffffff; margin-bottom:8px;">Card Vault</div>
-                            <div style="font-size:12px; color:#666; line-height:1.6;">
-                                Your Trusted Destination for Premium Gift Cards<br>
-                                <a href="https://cardvault.in" style="color:#667eea; text-decoration:none;">cardvault.in</a>
-                            </div>
-                            <div style="margin-top:15px; font-size:11px; color:#444;">
-                                © ${new Date().getFullYear()} Card Vault. All rights reserved.
-                            </div>
-                        </td>
-                    </tr>
-                    
-                </table>
-                
-                <!-- Bottom spacing -->
-                <div style="height:40px;"></div>
-                
-            </td>
-        </tr>
-    </table>
-    
+
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5;">
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f5; padding:40px 10px;">
+<tr>
+<td align="center">
+
+<table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e6e6e6;">
+
+<!-- Header -->
+
+<tr>
+<td style="padding:30px 30px 24px 30px; text-align:center; border-bottom:1px solid #eeeeee;">
+<div style="font-size:12px; letter-spacing:3px; color:#888;">CARD VAULT</div>
+<h1 style="margin:10px 0 5px 0; font-size:26px; font-weight:600; color:#222;">
+Your Gift Card
+</h1>
+<p style="margin:0; font-size:14px; color:#777;">
+Premium Digital Gift Card
+</p>
+</td>
+</tr>
+
+
+<!-- Main Content -->
+
+<tr>
+<td style="padding:30px;">
+
+<p style="margin:0 0 20px 0; font-size:15px; color:#333; line-height:1.6;">
+Dear <strong>${customerName}</strong>,
+</p>
+
+<p style="margin:0 0 25px 0; font-size:15px; color:#555; line-height:1.6;">
+Thank you for your purchase. Your digital gift card is ready. 
+Please find the card details below.
+</p>
+
+
+<!-- Product Box -->
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa; border:1px solid #eeeeee; border-radius:8px; margin-bottom:24px;">
+<tr>
+<td style="padding:18px; text-align:center;">
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:5px;">
+PRODUCT
+</div>
+<div style="font-size:20px; font-weight:600; color:#222;">
+${productName}
+</div>
+</td>
+</tr>
+</table>
+
+
+<!-- Card Details -->
+
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eeeeee; border-radius:8px; background:#fafafa;">
+<tr>
+<td style="padding:20px;">
+
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:6px;">
+CARD NUMBER
+</div>
+
+<div style="font-size:22px; font-weight:600; color:#222; letter-spacing:3px; font-family:'Courier New', monospace;">
+${maskedCard}
+</div>
+
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+<tr>
+
+<td width="50%">
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:4px;">
+PIN
+</div>
+
+<div style="font-size:18px; font-weight:600; color:#222; letter-spacing:2px;">
+${pin}
+</div>
+</td>
+
+
+<td width="50%" style="text-align:right;">
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:4px;">
+EXPIRY DATE
+</div>
+
+<div style="font-size:18px; font-weight:600; color:#666;">
+${expiryDate}
+</div>
+</td>
+
+</tr>
+</table>
+
+</td>
+</tr>
+</table>
+
+
+<!-- Important Notice -->
+
+<div style="margin-top:24px; padding:16px; background:#fafafa; border:1px solid #eeeeee; border-left:3px solid #cccccc; border-radius:6px;">
+<div style="font-size:12px; font-weight:600; color:#444; margin-bottom:4px;">
+Important
+</div>
+
+<div style="font-size:12px; color:#666; line-height:1.5;">
+Please keep your card details secure. Do not share your PIN with anyone.
+This card is non-refundable and non-transferable.
+</div>
+</div>
+
+
+<!-- Order ID -->
+
+<div style="margin-top:25px; text-align:center;">
+<span style="font-size:11px; color:#888;">
+Order ID: ${orderId}
+</span>
+</div>
+
+</td>
+</tr>
+
+
+<!-- Footer -->
+
+<tr>
+<td style="padding:22px 30px; border-top:1px solid #eeeeee; text-align:center; background:#fafafa;">
+
+<div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Your Trusted Destination for Premium Gift Cards<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">card-vaults.vercel.app</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
+
+</td>
+</tr>
+
+
+</table>
+
+<div style="height:40px;"></div>
+
+</td>
+</tr>
+</table>
+
 </body>
 </html>
                     `,
