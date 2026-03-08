@@ -45,6 +45,10 @@
             "destination": "/api/orders"
         },
         {
+            "source": "/api/orders/:id/send-giftcard",
+            "destination": "/api/orders"
+        },
+        {
             "source": "/api/orders/:id",
             "destination": "/api/orders"
         },
