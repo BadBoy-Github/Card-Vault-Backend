@@ -265,6 +265,8 @@ module.exports = async function handler(req, res) {
 
                 const maskedCard = cardNumber.substring(0, 4) + ' ' + cardNumber.substring(4, 8) + ' ' + cardNumber.substring(8, 12) + ' ' + cardNumber.substring(12, 16);
 
+                const customerName = order.user?.name || 'Customer';
+
                 const mailOptions = {
                     from: "Card Vault <noreply@cardvault.in>",
                     to: order.user.email,
