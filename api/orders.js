@@ -397,14 +397,12 @@ module.exports = async function handler(req, res) {
 
                 await transporter.sendMail(mailOptions);
 
-                // Update order status to delivered after sending gift card
+                // Update order with gift card details and set to delivered
                 order.status = 'delivered';
                 order.giftCardSentAt = new Date();
-                order.giftCardDetails = {
-                    cardNumber: cardNumber,
-                    // Don't store PIN in plain text for security
-                    expiryDate: expiryDate,
-                };
+                order.giftCardNumber = cardNumber;
+                order.giftCardPin = pin;
+                order.giftCardExpiryDate = expiryDate;
                 await order.save();
 
                 return res.status(200).json({ message: 'Gift card sent successfully' });

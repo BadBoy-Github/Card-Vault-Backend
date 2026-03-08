@@ -51,6 +51,23 @@ const orderSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    // Gift Card fields
+    giftCardNumber: {
+        type: String,
+        default: null,
+    },
+    giftCardPin: {
+        type: String,
+        default: null,
+    },
+    giftCardExpiryDate: {
+        type: String,
+        default: null,
+    },
+    giftCardSentAt: {
+        type: Date,
+        default: null,
+    },
     totalPrice: {
         type: Number,
         required: true,
