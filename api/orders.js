@@ -233,6 +233,12 @@ module.exports = async function handler(req, res) {
                     return res.status(400).json({ message: 'Card number, PIN, and expiry date are required' });
                 }
 
+                // Validate card number length
+                const cleanCardNumber = cardNumber.replace(/\s/g, '');
+                if (cleanCardNumber.length < 16) {
+                    return res.status(400).json({ message: 'Card number must be 16 digits' });
+                }
+
                 const order = await Order.findById(id).populate('user', 'name email');
 
                 if (!order) {
@@ -240,6 +246,9 @@ module.exports = async function handler(req, res) {
                 }
 
                 // Verify order is eligible for gift card sending
+                if (!order.user) {
+                    return res.status(400).json({ message: 'Order has no associated user' });
+                }
                 if (order.paymentStatus !== 'verified') {
                     return res.status(400).json({ message: 'Payment not verified for this order' });
                 }
@@ -263,12 +272,13 @@ module.exports = async function handler(req, res) {
                     },
                 });
 
-                const maskedCard = cardNumber.substring(0, 4) + ' ' + cardNumber.substring(4, 8) + ' ' + cardNumber.substring(8, 12) + ' ' + cardNumber.substring(12, 16);
+                const maskedCard = cardNumber.replace(/\s/g, '').substring(0, 4) + ' ' + cardNumber.replace(/\s/g, '').substring(4, 8) + ' ' + cardNumber.replace(/\s/g, '').substring(8, 12) + ' ' + cardNumber.replace(/\s/g, '').substring(12, 16);
 
                 const customerName = order.user?.name || 'Customer';
+                const orderId = order._id;
 
                 const mailOptions = {
-                    from: "Card Vault <noreply@cardvault.in>",
+                    from: process.env.EMAIL_FROM || process.env.SMTP_USER || "Card Vault",
                     to: order.user.email,
                     subject: `🎁 Your Gift Card is Here! - ${productName}`,
                     html: `
