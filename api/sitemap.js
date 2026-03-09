@@ -17,7 +17,7 @@ const staticPages = [
 ];
 
 // Base URL for the site
-const BASE_URL = 'https://card-vault.vercel.app';
+const BASE_URL = 'https://card-vaults.vercel.app';
 
 // Generate XML sitemap
 function generateSitemap(products = []) {

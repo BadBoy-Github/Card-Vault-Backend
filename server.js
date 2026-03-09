@@ -39,7 +39,7 @@ app.get('/sitemap.xml', async (req, res) => {
         const products = await Product.find({ active: true }).limit(1000).lean();
 
         const today = new Date().toISOString().split('T')[0];
-        const baseUrl = 'https://card-vault.vercel.app';
+        const baseUrl = 'https://card-vaults.vercel.app';
 
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
