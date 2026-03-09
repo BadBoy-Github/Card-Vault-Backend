@@ -32,6 +32,68 @@ app.get('/', (req, res) => {
     res.send('Card Vault API is running...');
 });
 
+// Sitemap Route
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        const Product = require('./models/Product');
+        const products = await Product.find({ active: true }).limit(1000).lean();
+
+        const today = new Date().toISOString().split('T')[0];
+        const baseUrl = 'https://card-vault.vercel.app';
+
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+`;
+
+        // Static pages
+        const staticPages = [
+            { url: '/', priority: '1.0', freq: 'daily' },
+            { url: '/search', priority: '0.9', freq: 'weekly' },
+            { url: '/wishlist', priority: '0.8', freq: 'weekly' },
+            { url: '/orders', priority: '0.8', freq: 'weekly' },
+            { url: '/contact', priority: '0.8', freq: 'monthly' },
+            { url: '/login', priority: '0.6', freq: 'monthly' },
+            { url: '/register', priority: '0.6', freq: 'monthly' },
+            { url: '/terms', priority: '0.5', freq: 'monthly' }
+        ];
+
+        staticPages.forEach(page => {
+            xml += `  <url>
+    <loc>${baseUrl}${page.url}</loc>
+    <changefreq>${page.freq}</changefreq>
+    <priority>${page.priority}</priority>
+    <lastmod>${today}</lastmod>
+  </url>\n`;
+        });
+
+        // Product pages
+        products.forEach(product => {
+            xml += `  <url>
+    <loc>${baseUrl}/product/${product._id}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>${today}</lastmod>\n`;
+            if (product.image) {
+                xml += `    <image:image>
+      <image:loc>${product.image}</image:loc>
+      <image:title>${product.name}</image:title>
+    </image:image>\n`;
+            }
+            xml += `  </url>\n`;
+        });
+
+        xml += '</urlset>';
+
+        res.set('Content-Type', 'application/xml');
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(xml);
+    } catch (error) {
+        console.error('Sitemap error:', error);
+        // Fallback to static sitemap
+        res.redirect('/sitemap.xml');
+    }
+});
+
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
