@@ -399,6 +399,242 @@ Your Trusted Destination for Premium Gift Cards<br>
         return res.status(200).json({ message: 'Gift card email sent successfully' });
       }
 
+      case 'neworder': {
+        // Send new order notification to admin
+        const { orderId, customerName, customerEmail, productName, totalPrice, orderItems, paymentStatus, orderDate } = data;
+
+        if (!orderId || !customerName || !totalPrice) {
+          return res.status(400).json({ message: 'Order ID, customer name, and total price are required' });
+        }
+
+        const itemsList = orderItems ? orderItems.map(item => `<li>${item.name || item.product || 'Product'} - Qty: ${item.qty || 1}</li>`).join('') : '<li>No items details available</li>';
+
+        const mailOptions = {
+          from: "Card Vault",
+          to: process.env.DEFAULT_ADMIN_EMAIL || 'elayabarathiedison@gmail.com',
+          subject: `🛒 New Order Placed - ${orderId}`,
+          html: `
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5; padding:40px 10px;">
+<tr>
+<td align="center">
+
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e6e6e6;">
+
+<!-- HEADER -->
+
+<tr>
+<td style="padding:30px; text-align:center; border-bottom:1px solid #eeeeee;">
+
+<div style="font-size:12px; letter-spacing:3px; color:#888;">
+CARD VAULT
+</div>
+
+<h1 style="margin:10px 0 5px 0; font-size:24px; font-weight:600; color:#222;">
+New Order Received
+</h1>
+
+<p style="margin:0; font-size:14px; color:#777;">
+A customer has placed an order
+</p>
+
+</td>
+</tr>
+
+
+<!-- ORDER DETAILS -->
+
+<tr>
+<td style="padding:30px;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; font-size:14px;">
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; width:40%; border-bottom:1px solid #eee;">
+Order ID
+</td>
+
+<td style="padding:12px 0; color:#222; border-bottom:1px solid #eee;">
+${orderId}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Customer Name
+</td>
+
+<td style="padding:12px 0; color:#222; border-bottom:1px solid #eee;">
+${customerName}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Customer Email
+</td>
+
+<td style="padding:12px 0; color:#222; border-bottom:1px solid #eee;">
+${customerEmail || 'Not provided'}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Total Amount
+</td>
+
+<td style="padding:12px 0; font-weight:600; color:#000; border-bottom:1px solid #eee;">
+₹${totalPrice}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Payment Status
+</td>
+
+<td style="padding:12px 0; border-bottom:1px solid #eee;">
+
+<span style="
+padding:5px 10px;
+border:1px solid #ccc;
+border-radius:4px;
+font-size:12px;
+font-weight:600;
+color:#333;
+background:#f7f7f7;
+">
+
+${paymentStatus === 'pending'
+              ? 'Pending'
+              : paymentStatus === 'awaiting_verification'
+                ? 'Awaiting Verification'
+                : paymentStatus === 'verified'
+                  ? 'Verified'
+                  : paymentStatus}
+
+</span>
+
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Order Date
+</td>
+
+<td style="padding:12px 0; color:#222; border-bottom:1px solid #eee;">
+${orderDate || new Date().toLocaleString()}
+</td>
+</tr>
+
+</table>
+
+
+<!-- ITEMS -->
+
+<div style="margin-top:25px;">
+
+<div style="font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#777; margin-bottom:10px;">
+Order Items
+</div>
+
+<div style="background:#fafafa; border:1px solid #eeeeee; border-radius:8px; padding:18px;">
+
+<ul style="margin:0; padding-left:20px; color:#333; line-height:1.6;">
+${itemsList}
+</ul>
+
+</div>
+
+</div>
+
+</td>
+</tr>
+
+
+<!-- BUTTON -->
+
+<tr>
+<td align="center" style="padding:0 30px 30px 30px;">
+
+<a href="https://card-vaults.vercel.app/admin"
+
+style="
+display:inline-block;
+padding:14px 30px;
+background:#111;
+color:#ffffff;
+text-decoration:none;
+border-radius:6px;
+font-weight:600;
+font-size:14px;
+">
+
+View Order Details
+
+</a>
+
+</td>
+</tr>
+
+
+<!-- FOOTER -->
+
+<tr>
+<td style="padding:22px 30px; border-top:1px solid #eeeeee; text-align:center; background:#fafafa;">
+
+<div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Admin Order Notification<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">
+card-vaults.vercel.app
+</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
+
+</td>
+</tr>
+
+</table>
+
+<div style="height:40px;"></div>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+
+                    `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        return res.status(200).json({ message: 'Order notification sent successfully' });
+      }
+
       default:
         return res.status(400).json({ message: 'Invalid email type' });
     }

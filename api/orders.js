@@ -629,6 +629,44 @@ Your Trusted Destination for Premium Gift Cards<br>
                 });
 
                 const createdOrder = await order.save();
+
+                // Send email notification to admin about new order
+                try {
+                    // Fetch user details for the email
+                    const orderUser = await User.findById(orderUserId).select('name email');
+
+                    // Prepare email data
+                    const emailData = {
+                        orderId: createdOrder._id.toString(),
+                        customerName: orderUser?.name || 'Customer',
+                        customerEmail: orderUser?.email || '',
+                        productName: orderItems[0]?.name || 'Gift Card',
+                        totalPrice: totalPrice,
+                        orderItems: orderItems,
+                        paymentStatus: createdOrder.paymentStatus,
+                        orderDate: createdOrder.createdAt?.toLocaleString() || new Date().toLocaleString()
+                    };
+
+                    // Send email notification to admin
+                    const emailRes = await fetch(`${process.env.API_URL || 'https://card-vault-backend.vercel.app'}/api/email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            type: 'neworder',
+                            data: emailData
+                        })
+                    });
+
+                    if (!emailRes.ok) {
+                        console.error('Failed to send order notification email');
+                    }
+                } catch (emailError) {
+                    // Log error but don't fail the order if email fails
+                    console.error('Order notification email error:', emailError);
+                }
+
                 return res.status(201).json(createdOrder);
             } catch (error) {
                 return res.status(500).json({ message: error.message });
