@@ -643,3 +643,221 @@ card-vaults.vercel.app
     return res.status(500).json({ message: 'Failed to send email', error: error.message });
   }
 };
+
+// Order Confirmation Email - Sends to customer when they place an order
+module.exports.sendOrderConfirmation = async function (toEmail, orderData) {
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const { orderId, customerName, productName, totalPrice, orderItems, orderDate } = orderData;
+  const itemsList = orderItems ? orderItems.map(item => `<li>${item.name || item.product || 'Product'} - Qty: ${item.qty || 1}</li>`).join('') : '<li>No items details available</li>';
+
+  const mailOptions = {
+    from: "Card Vault",
+    to: toEmail,
+    subject: `✅ Order Confirmed - ${orderId}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5; padding:40px 10px;">
+<tr>
+<td align="center">
+
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e6e6e6;">
+
+<!-- HEADER -->
+
+<tr>
+<td style="padding:30px; text-align:center; border-bottom:1px solid #eeeeee;">
+
+<div style="font-size:12px; letter-spacing:3px; color:#888;">
+CARD VAULT
+</div>
+
+<h1 style="margin:10px 0 5px 0; font-size:24px; font-weight:600; color:#222;">
+Order Confirmed
+</h1>
+
+<p style="margin:0; font-size:14px; color:#777;">
+Thank you for your purchase!
+</p>
+
+</td>
+</tr>
+
+
+<!-- GREETING -->
+
+<tr>
+<td style="padding:30px;">
+
+<p style="margin:0 0 20px 0; font-size:15px; color:#333; line-height:1.6;">
+Dear <strong>${customerName}</strong>,
+</p>
+
+<p style="margin:0 0 25px 0; font-size:15px; color:#555; line-height:1.6;">
+Your order has been successfully placed. We're processing your order and will notify you once it's ready.
+</p>
+
+
+<!-- ORDER DETAILS -->
+
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; font-size:14px;">
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; width:40%; border-bottom:1px solid #eee;">
+Order ID
+</td>
+
+<td style="padding:12px 0; color:#222; border-bottom:1px solid #eee;">
+${orderId}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Order Date
+</td>
+
+<td style="padding:12px 0; color:#222; border-bottom:1px solid #eee;">
+${orderDate || new Date().toLocaleString()}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Total Amount
+</td>
+
+<td style="padding:12px 0; font-weight:600; color:#000; border-bottom:1px solid #eee;">
+₹${totalPrice}
+</td>
+</tr>
+
+
+<tr>
+<td style="padding:12px 0; font-weight:600; color:#555; border-bottom:1px solid #eee;">
+Status
+</td>
+
+<td style="padding:12px 0; border-bottom:1px solid #eee;">
+
+<span style="
+padding:5px 10px;
+border:1px solid #ccc;
+border-radius:4px;
+font-size:12px;
+font-weight:600;
+color:#333;
+background:#f7f7f7;
+">
+Processing
+</span>
+
+</td>
+</tr>
+
+</table>
+
+
+<!-- ITEMS -->
+
+<div style="margin-top:25px;">
+
+<div style="font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#777; margin-bottom:10px;">
+Order Items
+</div>
+
+<div style="background:#fafafa; border:1px solid #eeeeee; border-radius:8px; padding:18px;">
+
+<ul style="margin:0; padding-left:20px; color:#333; line-height:1.6;">
+${itemsList}
+</ul>
+
+</div>
+
+</div>
+
+
+<!-- TRACK ORDER BUTTON -->
+
+<tr>
+<td align="center" style="padding:30px 30px 0 30px;">
+
+<a href="https://card-vaults.vercel.app/orders"
+
+style="
+display:inline-block;
+padding:14px 30px;
+background:#111;
+color:#ffffff;
+text-decoration:none;
+border-radius:6px;
+font-weight:600;
+font-size:14px;
+">
+
+Check Order Status
+
+</a>
+
+</td>
+</tr>
+
+
+<!-- FOOTER -->
+
+<tr>
+<td style="padding:22px 30px; border-top:1px solid #eeeeee; text-align:center; background:#fafafa;">
+
+<div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Your Trusted Destination for Premium Gift Cards<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">
+card-vaults.vercel.app
+</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
+
+</td>
+</tr>
+
+
+</table>
+
+<div style="height:40px;"></div>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};

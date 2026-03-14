@@ -667,6 +667,28 @@ Your Trusted Destination for Premium Gift Cards<br>
                     console.error('Order notification email error:', emailError);
                 }
 
+                // Send order confirmation email to customer
+                try {
+                    const orderUser = await User.findById(orderUserId).select('name email');
+
+                    if (orderUser?.email) {
+                        const { sendOrderConfirmation } = require('./email');
+
+                        await sendOrderConfirmation(orderUser.email, {
+                            orderId: createdOrder._id.toString(),
+                            customerName: orderUser?.name || 'Customer',
+                            productName: orderItems[0]?.name || 'Gift Card',
+                            totalPrice: totalPrice,
+                            orderItems: orderItems,
+                            orderDate: createdOrder.createdAt?.toLocaleString() || new Date().toLocaleString()
+                        });
+
+                        console.log('Order confirmation email sent to:', orderUser.email);
+                    }
+                } catch (customerEmailError) {
+                    console.error('Customer order confirmation email error:', customerEmailError);
+                }
+
                 return res.status(201).json(createdOrder);
             } catch (error) {
                 return res.status(500).json({ message: error.message });
