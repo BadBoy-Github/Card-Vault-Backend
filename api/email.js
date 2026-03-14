@@ -573,7 +573,7 @@ ${itemsList}
 <tr>
 <td align="center" style="padding:0 30px 30px 30px;">
 
-<a href="https://card-vaults.vercel.app/admin"
+<a href="https://card-vaults.vercel.app/admin/dashboard"
 
 style="
 display:inline-block;
