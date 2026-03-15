@@ -65,8 +65,8 @@ const changePassword = async (req, res) => {
             // Validate password strength
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
             if (!passwordRegex.test(newPassword)) {
-                return res.status(400).json({ 
-                    message: 'Password must be at least 8 characters with uppercase, lowercase, and number' 
+                return res.status(400).json({
+                    message: 'Password must be at least 8 characters with uppercase, lowercase, and number'
                 });
             }
 
@@ -92,8 +92,27 @@ const updateUser = async (req, res) => {
         const user = await User.findById(req.params.id);
 
         if (user) {
+            // Check if this is the master admin
+            const isMasterAdmin = user.email === 'elayabarathiedison@gmail.com';
+
+            // Don't allow changing master admin's email
+            if (isMasterAdmin && req.body.email && req.body.email !== user.email) {
+                return res.status(400).json({ message: 'Cannot change Master Admin email' });
+            }
+
             user.name = req.body.name || user.name;
             user.role = req.body.role || user.role;
+
+            // Only allow email change if not master admin
+            if (!isMasterAdmin && req.body.email) {
+                // Check if email is already in use by another user
+                const existingUser = await User.findOne({ email: req.body.email, _id: { $ne: user._id } });
+                if (existingUser) {
+                    return res.status(400).json({ message: 'Email already in use' });
+                }
+                user.email = req.body.email;
+            }
+
             const updatedUser = await user.save();
             res.json(updatedUser);
         } else {

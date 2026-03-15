@@ -101,6 +101,7 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/payment', require('./api/payment'));
+app.use('/api/newsletter', require('./api/newsletter'));
 
 const PORT = process.env.PORT || 5000;
 
