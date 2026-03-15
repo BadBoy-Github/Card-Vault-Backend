@@ -2,6 +2,8 @@ const connectDB = require('./_lib/db');
 const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
 const User = require('./_models/User');
+const Newsletter = require('./_models/Newsletter');
+const { sendNewsletterNewProduct } = require('./email');
 
 // Generate a 9-character alphanumeric ID with uppercase, lowercase, and numbers
 const generateProductId = () => {
@@ -182,6 +184,31 @@ module.exports = async function handler(req, res) {
                 });
 
                 const createdProduct = await product.save();
+
+                // Send newsletter to all subscribers about the new product (async, don't wait)
+                try {
+                    const subscribers = await Newsletter.find({ isActive: true }).select('email name');
+                    if (subscribers && subscribers.length > 0) {
+                        // Send newsletter in background
+                        sendNewsletterNewProduct(subscribers, {
+                            name: createdProduct.name,
+                            brand: createdProduct.brand,
+                            category: createdProduct.category,
+                            price: createdProduct.price,
+                            image: createdProduct.image,
+                            description: createdProduct.description,
+                            id: createdProduct.id
+                        }).then(() => {
+                            console.log(`Newsletter sent for new product: ${createdProduct.name}`);
+                        }).catch(err => {
+                            console.error('Failed to send newsletter:', err);
+                        });
+                    }
+                } catch (newsletterError) {
+                    console.error('Error sending newsletter:', newsletterError);
+                    // Don't fail the product creation if newsletter fails
+                }
+
                 return res.status(201).json(createdProduct);
             } catch (error) {
                 return res.status(500).json({ message: error.message });

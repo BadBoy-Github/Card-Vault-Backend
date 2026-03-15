@@ -123,10 +123,20 @@ module.exports = async function handler(req, res) {
 
     <!-- Footer -->
     <div style="padding:18px; border-top:1px solid #e5e5e5; text-align:center; font-size:12px; color:#777;">
-      <div style="font-weight:600; color:#333;">Card Vault</div>
-      Contact Form Notification<br>
-      This email was automatically generated.
+      <div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Your Trusted Destination for Premium Gift Cards<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">card-vaults.vercel.app</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
     </div>
+    
 
   </div>
 
@@ -196,9 +206,18 @@ module.exports = async function handler(req, res) {
 
     <!-- Footer -->
     <div style="padding:18px; border-top:1px solid #e5e5e5; text-align:center; font-size:12px; color:#777;">
-      <div style="font-weight:600; color:#333;">Card Vault</div>
-      Security Notification<br>
-      This email was automatically generated.
+      <div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Your Trusted Destination for Premium Gift Cards<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">card-vaults.vercel.app</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
     </div>
 
   </div>
@@ -860,4 +879,159 @@ card-vaults.vercel.app
   };
 
   await transporter.sendMail(mailOptions);
+};
+
+// Newsletter Email - Sends to all newsletter subscribers when a new product is added
+module.exports.sendNewsletterNewProduct = async function (subscribers, productData) {
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const { name, brand, category, price, image, description, id } = productData;
+  const frontendUrl = process.env.FRONTEND_URL || 'https://card-vault-frontend.vercel.app';
+  const productUrl = `${frontendUrl}/product/${id}`;
+
+  const mailOptions = {
+    from: "Card Vault",
+    bcc: subscribers.map(sub => sub.email),
+    subject: `New Gift Card Available: ${name}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5; padding:40px 10px;">
+<tr>
+<td align="center">
+
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e6e6e6;">
+
+<!-- HEADER -->
+
+<tr>
+<td style="padding:30px; text-align:center; border-bottom:1px solid #eeeeee;">
+
+<div style="font-size:12px; letter-spacing:3px; color:#888;">
+CARD VAULT
+</div>
+
+<h1 style="margin:10px 0 5px 0; font-size:24px; font-weight:600; color:#222;">
+New Gift Card Available
+</h1>
+
+<p style="margin:0; font-size:14px; color:#777;">
+Check out our latest addition
+</p>
+
+</td>
+</tr>
+
+<!-- Main Content -->
+
+<tr>
+<td style="padding:30px;">
+
+<p style="margin:0 0 20px 0; font-size:15px; color:#333; line-height:1.6;">
+Dear Subscriber,
+</p>
+
+<p style="margin:0 0 25px 0; font-size:15px; color:#555; line-height:1.6;">
+We're excited to announce a new gift card has been added to our collection. Here's what's new:
+</p>
+
+<!-- Product Box -->
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa; border:1px solid #eeeeee; border-radius:8px; margin-bottom:24px;">
+<tr>
+<td style="padding:18px; text-align:center;">
+
+${image ? `<div style="margin-bottom:12px;"><img src="${image}" alt="${name}" style="max-width:120px; height:auto; border-radius:6px;"></div>` : ''}
+
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:5px;">
+${brand || 'GIFT CARD'}
+</div>
+
+<div style="font-size:20px; font-weight:600; color:#222;">
+${name}
+</div>
+
+${category ? `<div style="font-size:13px; color:#666; margin-top:8px;">${category}</div>` : ''}
+
+<div style="font-size:22px; font-weight:600; color:#222; margin-top:12px;">
+${price}
+</div>
+
+${description ? `<div style="font-size:13px; color:#666; margin-top:12px; line-height:1.5;">${description.substring(0, 100)}${description.length > 100 ? '...' : ''}</div>` : ''}
+
+</td>
+</tr>
+</table>
+
+
+<!-- CTA Button -->
+
+<tr>
+<td style="padding:0 30px 30px 30px; text-align:center;">
+
+<a href="${productUrl}" style="display:inline-block; padding:12px 28px; background:#333333; color:#ffffff; text-decoration:none; font-size:14px; font-weight:600; border-radius:6px;">
+View Details
+</a>
+
+</td>
+</tr>
+
+<!-- Footer -->
+
+<tr>
+<td style="padding:22px 30px; border-top:1px solid #eeeeee; text-align:center; background:#fafafa;">
+
+<div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Your Trusted Destination for Premium Gift Cards<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">card-vaults.vercel.app</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
+
+</td>
+</tr>
+
+</table>
+
+<div style="height:40px;"></div>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Newsletter sent to ${subscribers.length} subscribers for product: ${name}`);
+    return { success: true, recipientCount: subscribers.length };
+  } catch (error) {
+    console.error('Newsletter send error:', error);
+    throw error;
+  }
 };
