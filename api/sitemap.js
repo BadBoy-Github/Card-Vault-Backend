@@ -14,7 +14,6 @@ const staticPages = [
     { loc: '/login', changefreq: 'yearly', priority: 0.5 },
     { loc: '/register', changefreq: 'yearly', priority: 0.5 },
     { loc: '/terms', changefreq: 'monthly', priority: 0.6 },
-    { loc: '/terms-contact', changefreq: 'monthly', priority: 0.6 },
     { loc: '/forgot-password', changefreq: 'yearly', priority: 0.3 },
 ];
 
