@@ -49,8 +49,20 @@ module.exports = async function handler(req, res) {
     const isAdmin = user && user.role === 'admin';
 
     // GET /api/newsletter - Get all newsletter subscribers (admin only)
+    // GET /api/newsletter?email=xxx - Check subscription status for an email
     if (method === 'GET') {
         try {
+            // Check if email query parameter is provided (for checking subscription status)
+            const email = req.query.email;
+            if (email) {
+                const subscriber = await Newsletter.findOne({ email: email.toLowerCase().trim() });
+                if (subscriber && subscriber.isActive) {
+                    return res.status(200).json({ subscribed: true, subscriber });
+                }
+                return res.status(200).json({ subscribed: false });
+            }
+
+            // Admin only for getting all subscribers
             if (!isAdmin) {
                 return res.status(403).json({ message: 'Not authorized as admin' });
             }
