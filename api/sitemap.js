@@ -1,19 +1,21 @@
-// Dynamic Sitemap Generator for SEO
+// Dynamic Sitemap Generator for SEO - Optimized for card vault, card-vault, card vaults, card-vaults
 // This generates XML sitemap dynamically based on products in the database
 
 const express = require('express');
 const router = express.Router();
 
-// Static pages that should always be in sitemap
+// Static pages that should always be in sitemap - Updated routes (removed /contact)
 const staticPages = [
     { loc: '/', changefreq: 'daily', priority: 1.0 },
-    { loc: '/search', changefreq: 'weekly', priority: 0.9 },
+    { loc: '/search', changefreq: 'daily', priority: 0.9 },
     { loc: '/wishlist', changefreq: 'weekly', priority: 0.8 },
     { loc: '/orders', changefreq: 'weekly', priority: 0.8 },
-    { loc: '/contact', changefreq: 'monthly', priority: 0.8 },
-    { loc: '/login', changefreq: 'monthly', priority: 0.6 },
-    { loc: '/register', changefreq: 'monthly', priority: 0.6 },
-    { loc: '/terms', changefreq: 'monthly', priority: 0.5 },
+    { loc: '/profile', changefreq: 'monthly', priority: 0.7 },
+    { loc: '/login', changefreq: 'yearly', priority: 0.5 },
+    { loc: '/register', changefreq: 'yearly', priority: 0.5 },
+    { loc: '/terms', changefreq: 'monthly', priority: 0.6 },
+    { loc: '/terms-contact', changefreq: 'monthly', priority: 0.6 },
+    { loc: '/forgot-password', changefreq: 'yearly', priority: 0.3 },
 ];
 
 // Base URL for the site
@@ -48,6 +50,7 @@ function generateSitemap(products = []) {
             const image = product.image ? `<image:image>
       <image:loc>${product.image}</image:loc>
       <image:title>${escapeXml(product.name || '')}</image:title>
+      <image:caption>Buy ${escapeXml(product.name || '')} gift card on Card Vault</image:caption>
     </image:image>` : '';
 
             xml += `  <url>
