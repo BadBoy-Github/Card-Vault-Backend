@@ -895,7 +895,7 @@ module.exports.sendNewsletterNewProduct = async function (subscribers, productDa
   });
 
   const { name, brand, category, price, image, description, id } = productData;
-  const frontendUrl = process.env.FRONTEND_URL || 'https://card-vault-frontend.vercel.app';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://card-vaults.vercel.app';
   const productUrl = `${frontendUrl}/product/${id}`;
 
   const mailOptions = {
