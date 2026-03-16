@@ -4,6 +4,9 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 
+// Import services
+const { startExpiryScheduler, checkExpiringProducts } = require('./services/expiryScheduler');
+
 // Load environment variables
 dotenv.config();
 
@@ -26,6 +29,9 @@ const connectDB = async () => {
 };
 
 connectDB();
+
+// Start the expiry notification scheduler
+startExpiryScheduler();
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -102,6 +108,24 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/payment', require('./api/payment'));
 app.use('/api/newsletter', require('./api/newsletter'));
+
+// Manual trigger endpoint for expiry check (for testing)
+app.post('/api/trigger-expiry-check', async (req, res) => {
+    try {
+        const products = await checkExpiringProducts();
+        res.json({
+            success: true,
+            message: `Found ${products.length} expiring products`,
+            products: products.map(p => ({
+                name: p.name,
+                brand: p.brand,
+                validityEndDateTime: p.validityEndDateTime
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 const PORT = process.env.PORT || 5000;
 
