@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 
 // Configuration
-const EXPIRY_WARNING_DAYS = 10; // Products expiring within this many days will trigger notification
+const EXPIRY_WARNING_DAYS = 30; // Products expiring within this many days will trigger notification
 const ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || 'elayabarathiedison@gmail.com';
 const MONGODB_URI = process.env.MONGODB_URI;
 
