@@ -6,6 +6,11 @@ const orderSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
+    type: {
+        type: String,
+        enum: ['regular', 'featured'],
+        default: 'regular',
+    },
     orderItems: [
         {
             name: { type: String, required: true },
@@ -16,7 +21,10 @@ const orderSchema = new mongoose.Schema({
             product: {
                 type: mongoose.Schema.ObjectId,
                 ref: 'Product',
-                required: true,
+            },
+            featuredProduct: {
+                type: mongoose.Schema.ObjectId,
+                ref: 'Product',
             },
         },
     ],
@@ -51,7 +59,7 @@ const orderSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
-    // Gift Card fields
+    // Gift Card fields - for regular orders (16 digit + 6 digit PIN)
     giftCardNumber: {
         type: String,
         default: null,
@@ -61,6 +69,11 @@ const orderSchema = new mongoose.Schema({
         default: null,
     },
     giftCardExpiryDate: {
+        type: String,
+        default: null,
+    },
+    // Gift Card Code - for featured orders (variable length code)
+    giftCardCode: {
         type: String,
         default: null,
     },

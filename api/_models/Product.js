@@ -6,6 +6,11 @@ const productSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    type: {
+        type: String,
+        enum: ['regular', 'featured'],
+        default: 'regular',
+    },
     brand: {
         type: String,
         required: true,
@@ -13,6 +18,10 @@ const productSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
+    },
+    subheading: {
+        type: String,
+        default: null,
     },
     denomination: String,
     value: {

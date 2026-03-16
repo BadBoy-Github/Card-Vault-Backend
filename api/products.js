@@ -16,7 +16,7 @@ const generateProductId = () => {
 };
 
 // Generate unique product ID by checking database
-const generateUniqueProductId = async () => {
+const generateUniqueProductId = async (productType = 'regular') => {
     let id;
     let exists = true;
     let attempts = 0;
@@ -24,7 +24,7 @@ const generateUniqueProductId = async () => {
 
     while (exists && attempts < maxAttempts) {
         id = generateProductId();
-        const existingProduct = await Product.findOne({ id });
+        const existingProduct = await Product.findOne({ id, type: productType });
         exists = !!existingProduct;
         attempts++;
     }
@@ -94,10 +94,13 @@ module.exports = async function handler(req, res) {
     // Get product ID from path or query
     const productId = getProductIdFromPath(req.url) || query.id;
 
+    // Determine product type (regular or featured)
+    const productType = query.type === 'featured' ? 'featured' : 'regular';
+
     // Check if this is a request for a new product ID preview
     if (method === 'GET' && query.generateId === 'true') {
         try {
-            const newId = await generateUniqueProductId();
+            const newId = await generateUniqueProductId(productType);
             return res.status(200).json({ id: newId });
         } catch (error) {
             return res.status(500).json({ message: error.message });
@@ -120,10 +123,14 @@ module.exports = async function handler(req, res) {
                     const searchQuery = query.search;
                     let products;
 
+                    // Build filter based on type
+                    const filter = productType === 'featured' ? { type: 'featured' } : { type: { $ne: 'featured' } };
+
                     if (searchQuery) {
                         // Search by name, brand, or category
                         const searchRegex = new RegExp(searchQuery, 'i');
                         products = await Product.find({
+                            ...filter,
                             $or: [
                                 { name: searchRegex },
                                 { brand: searchRegex },
@@ -132,7 +139,7 @@ module.exports = async function handler(req, res) {
                             ]
                         });
                     } else {
-                        products = await Product.find({});
+                        products = await Product.find(filter);
                     }
 
                     return res.status(200).json(products);
@@ -155,6 +162,7 @@ module.exports = async function handler(req, res) {
                 const {
                     brand,
                     name,
+                    subheading,
                     denomination,
                     category,
                     image,
@@ -163,15 +171,21 @@ module.exports = async function handler(req, res) {
                     validityEndDateTime,
                     stock,
                     popular,
+                    type, // Allow specifying type in body
                 } = body;
 
+                // Determine product type
+                const productTypeFromBody = type === 'featured' ? 'featured' : 'regular';
+
                 // Generate unique product ID
-                const productId = await generateUniqueProductId();
+                const productId = await generateUniqueProductId(productTypeFromBody);
 
                 const product = new Product({
                     id: productId,
+                    type: productTypeFromBody,
                     brand,
                     name,
+                    subheading: productTypeFromBody === 'featured' ? subheading : null,
                     denomination,
                     value: price, // Use price as value
                     category,
@@ -192,6 +206,7 @@ module.exports = async function handler(req, res) {
                         // Send newsletter in background
                         sendNewsletterNewProduct(subscribers, {
                             name: createdProduct.name,
+                            subheading: createdProduct.subheading,
                             brand: createdProduct.brand,
                             category: createdProduct.category,
                             price: createdProduct.price,
@@ -228,6 +243,7 @@ module.exports = async function handler(req, res) {
                 if (product) {
                     product.brand = body.brand || product.brand;
                     product.name = body.name || product.name;
+                    product.subheading = body.subheading !== undefined ? body.subheading : product.subheading;
                     product.denomination = body.denomination || product.denomination;
                     product.value = body.value || product.value;
                     product.category = body.category || product.category;

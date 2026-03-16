@@ -83,9 +83,12 @@ module.exports = async function handler(req, res) {
 
     await connectDB();
 
-    const { method, body } = req;
+    const { method, body, query } = req;
     const user = await getUserFromToken(req);
     const { action, id } = parsePath(req.url);
+
+    // Determine order type (regular or featured)
+    const orderType = query.type === 'featured' ? 'featured' : 'regular';
 
     // For admin routes, check if user is admin
     const isAdmin = user && user.role === 'admin';
@@ -97,7 +100,9 @@ module.exports = async function handler(req, res) {
         }
         if (method === 'GET') {
             try {
-                const orders = await Order.find({ user: user._id }).sort({ createdAt: -1 });
+                // Filter by order type
+                const filter = { user: user._id, type: orderType };
+                const orders = await Order.find(filter).sort({ createdAt: -1 });
                 return res.status(200).json(orders);
             } catch (error) {
                 return res.status(500).json({ message: error.message });
@@ -157,10 +162,19 @@ module.exports = async function handler(req, res) {
 
                 // REDUCE STOCK NOW - Only after UTR is submitted
                 for (const item of order.orderItems) {
-                    const product = await Product.findById(item.product);
-                    if (product) {
-                        product.stock -= item.qty;
-                        await product.save();
+                    // Handle both regular and featured products
+                    if (order.type === 'featured' && item.featuredProduct) {
+                        const product = await Product.findById(item.featuredProduct);
+                        if (product) {
+                            product.stock -= item.qty;
+                            await product.save();
+                        }
+                    } else if (item.product) {
+                        const product = await Product.findById(item.product);
+                        if (product) {
+                            product.stock -= item.qty;
+                            await product.save();
+                        }
                     }
                 }
 
@@ -227,17 +241,7 @@ module.exports = async function handler(req, res) {
         }
         if (method === 'POST') {
             try {
-                const { cardNumber, pin, expiryDate } = body;
-
-                if (!cardNumber || !pin || !expiryDate) {
-                    return res.status(400).json({ message: 'Card number, PIN, and expiry date are required' });
-                }
-
-                // Validate card number length
-                const cleanCardNumber = cardNumber.replace(/\s/g, '');
-                if (cleanCardNumber.length < 16) {
-                    return res.status(400).json({ message: 'Card number must be 16 digits' });
-                }
+                const { cardNumber, pin, expiryDate, giftCardCode } = body;
 
                 const order = await Order.findById(id).populate('user', 'name email');
 
@@ -272,16 +276,206 @@ module.exports = async function handler(req, res) {
                     },
                 });
 
-                const maskedCard = cardNumber.replace(/\s/g, '').substring(0, 4) + ' ' + cardNumber.replace(/\s/g, '').substring(4, 8) + ' ' + cardNumber.replace(/\s/g, '').substring(8, 12) + ' ' + cardNumber.replace(/\s/g, '').substring(12, 16);
-
                 const customerName = order.user?.name || 'Customer';
                 const orderId = order._id;
 
-                const mailOptions = {
-                    from: process.env.EMAIL_FROM || process.env.SMTP_USER || "Card Vault",
-                    to: order.user.email,
-                    subject: `🎁 Your Gift Card is Here! - ${productName}`,
-                    html: `
+                let mailOptions;
+                let finalGiftCardCode;
+                let finalExpiryDate = expiryDate;
+
+                if (order.type === 'featured') {
+                    // Featured order - use single giftCardCode
+                    if (!giftCardCode || !expiryDate) {
+                        return res.status(400).json({ message: 'Gift card code and expiry date are required' });
+                    }
+                    if (giftCardCode.length < 2) {
+                        return res.status(400).json({ message: 'Gift card code must be at least 2 characters' });
+                    }
+                    finalGiftCardCode = giftCardCode;
+
+                    mailOptions = {
+                        from: process.env.EMAIL_FROM || process.env.SMTP_USER || "Card Vault",
+                        to: order.user.email,
+                        subject: `🎁 Your Featured Gift Card Code is Here! - ${productName}`,
+                        html: `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f5f5f5;">
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f5f5; padding:40px 10px;">
+<tr>
+<td align="center">
+
+<table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e6e6e6;">
+
+<!-- Header -->
+
+<tr>
+<td style="padding:30px 30px 24px 30px; text-align:center; border-bottom:1px solid #eeeeee;">
+<div style="font-size:12px; letter-spacing:3px; color:#888;">CARD VAULT</div>
+<h1 style="margin:10px 0 5px 0; font-size:26px; font-weight:600; color:#222;">
+Your Gift Card Code
+</h1>
+<p style="margin:0; font-size:14px; color:#777;">
+Featured Gift Card
+</p>
+</td>
+</tr>
+
+
+<!-- Main Content -->
+
+<tr>
+<td style="padding:30px;">
+
+<p style="margin:0 0 20px 0; font-size:15px; color:#333; line-height:1.6;">
+Dear <strong>${customerName}</strong>,
+</p>
+
+<p style="margin:0 0 25px 0; font-size:15px; color:#555; line-height:1.6;">
+Thank you for your purchase. Your featured gift card code is ready. 
+Please find the code details below.
+</p>
+
+
+<!-- Product Box -->
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa; border:1px solid #eeeeee; border-radius:8px; margin-bottom:24px;">
+<tr>
+<td style="padding:18px; text-align:center;">
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:5px;">
+PRODUCT
+</div>
+<div style="font-size:20px; font-weight:600; color:#222;">
+${productName}
+</div>
+</td>
+</tr>
+</table>
+
+
+<!-- Card Code Details -->
+
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eeeeee; border-radius:8px; background:#fafafa;">
+<tr>
+<td style="padding:20px;">
+
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:6px;">
+GIFT CARD CODE
+</div>
+
+<div style="font-size:22px; font-weight:600; color:#222; letter-spacing:3px; font-family:'Courier New', monospace;">
+${giftCardCode}
+</div>
+
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+<tr>
+
+<td width="100%">
+<div style="font-size:11px; letter-spacing:1px; color:#888; margin-bottom:4px;">
+EXPIRY DATE
+</div>
+
+<div style="font-size:18px; font-weight:600; color:#666;">
+${expiryDate}
+</div>
+</td>
+
+</tr>
+</table>
+
+</td>
+</tr>
+</table>
+
+
+<!-- Important Notice -->
+
+<div style="margin-top:24px; padding:16px; background:#fafafa; border:1px solid #eeeeee; border-left:3px solid #cccccc; border-radius:6px;">
+<div style="font-size:12px; font-weight:600; color:#444; margin-bottom:4px;">
+Important
+</div>
+
+<div style="font-size:12px; color:#666; line-height:1.5;">
+Please keep your code secure. Do not share your code with anyone.
+This code is non-refundable and non-transferable.
+</div>
+</div>
+
+
+<!-- Order ID -->
+
+<div style="margin-top:25px; text-align:center;">
+<span style="font-size:11px; color:#888;">
+Order ID: ${orderId}
+</span>
+</div>
+
+</td>
+</tr>
+
+
+<!-- Footer -->
+
+<tr>
+<td style="padding:22px 30px; border-top:1px solid #eeeeee; text-align:center; background:#fafafa;">
+
+<div style="font-size:15px; font-weight:600; color:#222; margin-bottom:6px;">
+Card Vault
+</div>
+
+<div style="font-size:12px; color:#777; line-height:1.6;">
+Your Trusted Destination for Premium Gift Cards<br>
+<a href="https://card-vaults.vercel.app/" style="color:#555; text-decoration:none;">card-vaults.vercel.app</a>
+</div>
+
+<div style="margin-top:12px; font-size:11px; color:#999;">
+© ${new Date().getFullYear()} Card Vault. All rights reserved.
+</div>
+
+</td>
+</tr>
+
+
+</table>
+
+<div style="height:40px;"></div>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+                        `,
+                    };
+                } else {
+                    // Regular order - use cardNumber + pin
+                    if (!cardNumber || !pin || !expiryDate) {
+                        return res.status(400).json({ message: 'Card number, PIN, and expiry date are required' });
+                    }
+
+                    // Validate card number length
+                    const cleanCardNumber = cardNumber.replace(/\s/g, '');
+                    if (cleanCardNumber.length < 16) {
+                        return res.status(400).json({ message: 'Card number must be 16 digits' });
+                    }
+
+                    finalGiftCardCode = cardNumber;
+
+                    const maskedCard = cardNumber.replace(/\s/g, '').substring(0, 4) + ' ' + cardNumber.replace(/\s/g, '').substring(4, 8) + ' ' + cardNumber.replace(/\s/g, '').substring(8, 12) + ' ' + cardNumber.replace(/\s/g, '').substring(12, 16);
+
+                    mailOptions = {
+                        from: process.env.EMAIL_FROM || process.env.SMTP_USER || "Card Vault",
+                        to: order.user.email,
+                        subject: `🎁 Your Gift Card is Here! - ${productName}`,
+                        html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -448,17 +642,24 @@ Your Trusted Destination for Premium Gift Cards<br>
 
 </body>
 </html>
-                    `,
-                };
+                        `,
+                    };
+                }
 
                 await transporter.sendMail(mailOptions);
 
                 // Update order with gift card details and set to delivered
                 order.status = 'delivered';
                 order.giftCardSentAt = new Date();
-                order.giftCardNumber = cardNumber;
-                order.giftCardPin = pin;
-                order.giftCardExpiryDate = expiryDate;
+
+                if (order.type === 'featured') {
+                    order.giftCardCode = giftCardCode;
+                } else {
+                    order.giftCardNumber = cardNumber;
+                    order.giftCardPin = pin;
+                }
+                order.giftCardExpiryDate = finalExpiryDate;
+
                 await order.save();
 
                 return res.status(200).json({ message: 'Gift card sent successfully' });
@@ -513,12 +714,20 @@ Your Trusted Destination for Premium Gift Cards<br>
                     }
                     const order = await Order.findById(id);
                     if (order) {
-                        // Restore stock
+                        // Restore stock - handle both regular and featured products
                         for (const item of order.orderItems) {
-                            const product = await Product.findById(item.product);
-                            if (product) {
-                                product.stock += item.qty;
-                                await product.save();
+                            if (order.type === 'featured' && item.featuredProduct) {
+                                const product = await Product.findById(item.featuredProduct);
+                                if (product) {
+                                    product.stock += item.qty;
+                                    await product.save();
+                                }
+                            } else if (item.product) {
+                                const product = await Product.findById(item.product);
+                                if (product) {
+                                    product.stock += item.qty;
+                                    await product.save();
+                                }
                             }
                         }
                         await order.deleteOne();
@@ -541,9 +750,10 @@ Your Trusted Destination for Premium Gift Cards<br>
                 if (!user) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
-                // Get all orders (admin only)
+                // Get all orders filtered by type (admin only)
                 if (isAdmin) {
-                    const orders = await Order.find({}).populate('user', 'id name email').sort({ createdAt: -1 });
+                    const filter = { type: orderType };
+                    const orders = await Order.find(filter).populate('user', 'id name email').sort({ createdAt: -1 });
                     return res.status(200).json(orders);
                 }
                 return res.status(403).json({ message: 'Not authorized as admin' });
@@ -557,20 +767,33 @@ Your Trusted Destination for Premium Gift Cards<br>
                     return res.status(401).json({ message: 'Not authorized' });
                 }
 
-                const { orderItems, totalPrice, user: orderUser, utrNumber, paymentAmount, paymentStatus, paymentMethod } = body;
+                const { orderItems, totalPrice, user: orderUser, utrNumber, paymentAmount, paymentStatus, paymentMethod, type } = body;
 
                 if (!orderItems || orderItems.length === 0) {
                     return res.status(400).json({ message: 'No order items' });
                 }
 
-                // Check stock availability
+                // Determine order type from body or query
+                const orderTypeFromBody = type || orderType;
+
+                // Check stock availability - handle both regular and featured products
                 for (const item of orderItems) {
-                    const product = await Product.findById(item.product);
-                    if (!product) {
-                        return res.status(404).json({ message: `Product ${item.name} not found` });
-                    }
-                    if (product.stock < item.qty) {
-                        return res.status(400).json({ message: `Insufficient stock for ${item.name}` });
+                    if (orderTypeFromBody === 'featured' && item.featuredProduct) {
+                        const product = await Product.findById(item.featuredProduct);
+                        if (!product) {
+                            return res.status(404).json({ message: `Featured Product ${item.name} not found` });
+                        }
+                        if (product.stock < item.qty) {
+                            return res.status(400).json({ message: `Insufficient stock for ${item.name}` });
+                        }
+                    } else if (item.product) {
+                        const product = await Product.findById(item.product);
+                        if (!product) {
+                            return res.status(404).json({ message: `Product ${item.name} not found` });
+                        }
+                        if (product.stock < item.qty) {
+                            return res.status(400).json({ message: `Insufficient stock for ${item.name}` });
+                        }
                     }
                 }
 
@@ -605,10 +828,18 @@ Your Trusted Destination for Premium Gift Cards<br>
                 // If UTR is submitted, reduce stock immediately
                 if (isUTRSubmitted) {
                     for (const item of orderItems) {
-                        const product = await Product.findById(item.product);
-                        if (product) {
-                            product.stock -= item.qty;
-                            await product.save();
+                        if (orderTypeFromBody === 'featured' && item.featuredProduct) {
+                            const product = await Product.findById(item.featuredProduct);
+                            if (product) {
+                                product.stock -= item.qty;
+                                await product.save();
+                            }
+                        } else if (item.product) {
+                            const product = await Product.findById(item.product);
+                            if (product) {
+                                product.stock -= item.qty;
+                                await product.save();
+                            }
                         }
                     }
                 }
@@ -617,6 +848,7 @@ Your Trusted Destination for Premium Gift Cards<br>
                 const order = new Order({
                     orderItems,
                     user: orderUserId,
+                    type: orderTypeFromBody,
                     totalPrice,
                     // Use determined payment status
                     paymentStatus: finalPaymentStatus,
@@ -633,13 +865,13 @@ Your Trusted Destination for Premium Gift Cards<br>
                 // Send email notification to admin about new order
                 try {
                     // Fetch user details for the email
-                    const orderUser = await User.findById(orderUserId).select('name email');
+                    const orderUserData = await User.findById(orderUserId).select('name email');
 
                     // Prepare email data
                     const emailData = {
                         orderId: createdOrder._id.toString(),
-                        customerName: orderUser?.name || 'Customer',
-                        customerEmail: orderUser?.email || '',
+                        customerName: orderUserData?.name || 'Customer',
+                        customerEmail: orderUserData?.email || '',
                         productName: orderItems[0]?.name || 'Gift Card',
                         totalPrice: totalPrice,
                         orderItems: orderItems,
@@ -669,21 +901,21 @@ Your Trusted Destination for Premium Gift Cards<br>
 
                 // Send order confirmation email to customer
                 try {
-                    const orderUser = await User.findById(orderUserId).select('name email');
+                    const orderUserData = await User.findById(orderUserId).select('name email');
 
-                    if (orderUser?.email) {
+                    if (orderUserData?.email) {
                         const { sendOrderConfirmation } = require('./email');
 
-                        await sendOrderConfirmation(orderUser.email, {
+                        await sendOrderConfirmation(orderUserData.email, {
                             orderId: createdOrder._id.toString(),
-                            customerName: orderUser?.name || 'Customer',
+                            customerName: orderUserData?.name || 'Customer',
                             productName: orderItems[0]?.name || 'Gift Card',
                             totalPrice: totalPrice,
                             orderItems: orderItems,
                             orderDate: createdOrder.createdAt?.toLocaleString() || new Date().toLocaleString()
                         });
 
-                        console.log('Order confirmation email sent to:', orderUser.email);
+                        console.log('Order confirmation email sent to:', orderUserData.email);
                     }
                 } catch (customerEmailError) {
                     console.error('Customer order confirmation email error:', customerEmailError);
