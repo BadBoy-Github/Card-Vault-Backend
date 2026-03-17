@@ -51,16 +51,19 @@ app.get('/sitemap.xml', async (req, res) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 `;
 
-        // Static pages
+        // Static pages - matching frontend routes
         const staticPages = [
             { url: '/', priority: '1.0', freq: 'daily' },
-            { url: '/search', priority: '0.9', freq: 'weekly' },
+            { url: '/search', priority: '0.9', freq: 'daily' },
+            { url: '/featured-product/example', priority: '0.8', freq: 'weekly' },
+            { url: '/product/example', priority: '0.7', freq: 'weekly' },
             { url: '/wishlist', priority: '0.8', freq: 'weekly' },
             { url: '/orders', priority: '0.8', freq: 'weekly' },
-            { url: '/contact', priority: '0.8', freq: 'monthly' },
-            { url: '/login', priority: '0.6', freq: 'monthly' },
-            { url: '/register', priority: '0.6', freq: 'monthly' },
-            { url: '/terms', priority: '0.5', freq: 'monthly' }
+            { url: '/profile', priority: '0.7', freq: 'monthly' },
+            { url: '/login', priority: '0.5', freq: 'yearly' },
+            { url: '/register', priority: '0.5', freq: 'yearly' },
+            { url: '/terms', priority: '0.6', freq: 'monthly' },
+            { url: '/forgot-password', priority: '0.3', freq: 'yearly' }
         ];
 
         staticPages.forEach(page => {
@@ -108,6 +111,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/payment', require('./api/payment'));
 app.use('/api/newsletter', require('./api/newsletter'));
+app.use('/api/sitemap', require('./api/sitemap'));
 
 // Manual trigger endpoint for expiry check (for testing)
 app.post('/api/trigger-expiry-check', async (req, res) => {

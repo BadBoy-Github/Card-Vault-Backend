@@ -4,10 +4,12 @@
 const express = require('express');
 const router = express.Router();
 
-// Static pages that should always be in sitemap - Updated routes (removed /contact)
+// Static pages that should always be in sitemap
 const staticPages = [
     { loc: '/', changefreq: 'daily', priority: 1.0 },
     { loc: '/search', changefreq: 'daily', priority: 0.9 },
+    { loc: '/featured-product/example', changefreq: 'weekly', priority: 0.8 },
+    { loc: '/product/example', changefreq: 'weekly', priority: 0.7 },
     { loc: '/wishlist', changefreq: 'weekly', priority: 0.8 },
     { loc: '/orders', changefreq: 'weekly', priority: 0.8 },
     { loc: '/profile', changefreq: 'monthly', priority: 0.7 },
@@ -45,6 +47,7 @@ function generateSitemap(products = []) {
     // Add dynamic product pages
     if (products && products.length > 0) {
         products.forEach(product => {
+            // Product detail pages
             const url = `/product/${product._id || product.id}`;
             const image = product.image ? `<image:image>
       <image:loc>${product.image}</image:loc>
@@ -61,6 +64,26 @@ function generateSitemap(products = []) {
   </url>
 `;
         });
+
+        // Add featured product pages
+        const featuredProducts = products.filter(p => p.featured);
+        featuredProducts.forEach(product => {
+            const url = `/featured-product/${product._id || product.id}`;
+            const image = product.image ? `<image:image>
+      <image:loc>${product.image}</image:loc>
+      <image:title>${escapeXml(product.name || '')} - Featured</image:title>
+      <image:caption>Featured: ${escapeXml(product.name || '')} gift card on Card Vault</image:caption>
+    </image:image>` : '';
+
+            xml += `  <url>
+    <loc>${BASE_URL}${url}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>${today}</lastmod>
+    ${image}
+  </url>
+`;
+        });
     }
 
     xml += '</urlset>';
@@ -71,11 +94,11 @@ function generateSitemap(products = []) {
 function escapeXml(unsafe) {
     return unsafe.replace(/[<>&'"]/g, (c) => {
         switch (c) {
-            case '<': return '<';
-            case '>': return '>';
-            case '&': return '&';
-            case '\'': return ''';
-            case '"': return '"';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case '\'': return '&apos;';
+            case '"': return '&quot;';
         }
     });
 }
