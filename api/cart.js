@@ -8,24 +8,30 @@ const connectDB = async () => {
     }
 };
 
-// Cart Schema
+// Cart Schema (matching original model)
 const cartItemSchema = new mongoose.Schema({
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    name: String,
-    brand: String,
-    price: Number,
-    image: String,
-    quantity: { type: Number, default: 1 },
-    validityEndDateTime: Date
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    quantity: { type: Number, default: 1 }
 });
 
 const cartSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    items: [cartItemSchema],
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    products: [cartItemSchema],
     updatedAt: { type: Date, default: Date.now }
 });
 
 const Cart = mongoose.models.Cart || mongoose.model('Cart', cartSchema);
+
+// Product Schema (for checking stock)
+const productSchema = new mongoose.Schema({
+    name: String,
+    brand: String,
+    price: Number,
+    image: String,
+    stock: Number
+});
+
+const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 
 // CORS headers
 const corsHeaders = (res, origin = '*') => {
@@ -50,7 +56,7 @@ module.exports = async function handler(req, res) {
         // Get auth token from header
         const authHeader = req.headers.authorization;
         if (!authHeader) {
-            return res.status(401).json({ success: false, message: 'No token provided' });
+            return res.status(401).json({ message: 'No token provided' });
         }
 
         // Verify JWT token
@@ -61,102 +67,129 @@ module.exports = async function handler(req, res) {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             userId = decoded.id;
         } catch (e) {
-            return res.status(401).json({ success: false, message: 'Invalid token' });
+            return res.status(401).json({ message: 'Invalid token' });
         }
 
         if (!userId) {
-            return res.status(401).json({ success: false, message: 'Invalid token' });
+            return res.status(401).json({ message: 'Invalid token' });
         }
+
+        const userIdObj = new mongoose.Types.ObjectId(userId);
 
         switch (req.method) {
             case 'GET':
-                // Get cart
-                let cart = await Cart.findOne({ userId });
+                // Get cart - returns cart directly like original controller
+                let cart = await Cart.findOne({ user: userIdObj }).populate('products.product');
+
                 if (!cart) {
-                    cart = new Cart({ userId, items: [] });
+                    cart = await Cart.create({ user: userIdObj, products: [] });
+                }
+
+                // Filter out products that don't exist or have been deleted
+                const validProducts = cart.products.filter(item => item.product !== null);
+
+                // If there were invalid products, update the cart
+                if (validProducts.length !== cart.products.length) {
+                    cart.products = validProducts;
                     await cart.save();
                 }
-                return res.status(200).json({ success: true, cart });
+
+                // Return cart directly (matching original controller format)
+                return res.json(cart);
 
             case 'POST':
                 // Add to cart
-                const { productId, name, brand, price, image, quantity = 1, validityEndDateTime } = req.body;
+                const { productId, quantity = 1 } = req.body;
 
-                cart = await Cart.findOne({ userId });
-                if (!cart) {
-                    cart = new Cart({ userId, items: [] });
+                // Check if product exists and is in stock
+                const product = await Product.findById(productId);
+                if (!product) {
+                    return res.status(404).json({ message: 'Product not found' });
                 }
 
-                const existingItemIndex = cart.items.findIndex(
-                    item => item.productId.toString() === productId
+                if (product.stock < 1) {
+                    return res.status(400).json({ message: 'Product is out of stock' });
+                }
+
+                let cartToUpdate = await Cart.findOne({ user: userIdObj });
+
+                if (!cartToUpdate) {
+                    cartToUpdate = await Cart.create({ user: userIdObj, products: [] });
+                }
+
+                // Check if product already in cart
+                const productIndex = cartToUpdate.products.findIndex(
+                    p => p.product.toString() === productId
                 );
 
-                if (existingItemIndex > -1) {
-                    cart.items[existingItemIndex].quantity += quantity;
+                if (productIndex > -1) {
+                    // Update quantity
+                    const newQuantity = cartToUpdate.products[productIndex].quantity + quantity;
+
+                    // Check stock availability
+                    if (newQuantity > product.stock) {
+                        return res.status(400).json({ message: `Only ${product.stock} items available in stock` });
+                    }
+
+                    cartToUpdate.products[productIndex].quantity = newQuantity;
                 } else {
-                    cart.items.push({
-                        productId,
-                        name,
-                        brand,
-                        price,
-                        image,
-                        quantity,
-                        validityEndDateTime
-                    });
+                    // Add new product to cart
+                    cartToUpdate.products.push({ product: productId, quantity });
                 }
 
-                cart.updatedAt = new Date();
-                await cart.save();
-                return res.status(200).json({ success: true, cart });
+                await cartToUpdate.save();
+
+                const updatedCart = await Cart.findById(cartToUpdate._id).populate('products.product');
+                return res.json(updatedCart);
 
             case 'PUT':
                 // Update quantity
                 const { productId: updateProductId, quantity: newQuantity } = req.body;
 
-                cart = await Cart.findOne({ userId });
+                cart = await Cart.findOne({ user: userIdObj });
                 if (!cart) {
-                    return res.status(404).json({ success: false, message: 'Cart not found' });
+                    return res.status(404).json({ message: 'Cart not found' });
                 }
 
-                const itemToUpdate = cart.items.find(
-                    item => item.productId.toString() === updateProductId
+                const itemToUpdate = cart.products.find(
+                    item => item.product.toString() === updateProductId
                 );
 
                 if (itemToUpdate) {
                     itemToUpdate.quantity = newQuantity;
-                    cart.updatedAt = new Date();
                     await cart.save();
-                    return res.status(200).json({ success: true, cart });
+                    const updatedCart = await Cart.findById(cart._id).populate('products.product');
+                    return res.json(updatedCart);
                 }
-                return res.status(404).json({ success: false, message: 'Item not found in cart' });
+                return res.status(404).json({ message: 'Item not found in cart' });
 
             case 'DELETE':
                 const { productId: deleteProductId } = req.query;
 
-                cart = await Cart.findOne({ userId });
+                cart = await Cart.findOne({ user: userIdObj });
                 if (!cart) {
-                    return res.status(404).json({ success: false, message: 'Cart not found' });
+                    return res.status(404).json({ message: 'Cart not found' });
                 }
 
                 if (deleteProductId) {
                     // Remove specific item
-                    cart.items = cart.items.filter(
-                        item => item.productId.toString() !== deleteProductId
+                    cart.products = cart.products.filter(
+                        item => item.product.toString() !== deleteProductId
                     );
                 } else {
                     // Clear entire cart
-                    cart.items = [];
+                    cart.products = [];
                 }
 
-                cart.updatedAt = new Date();
                 await cart.save();
-                return res.status(200).json({ success: true, cart });
+                const finalCart = await Cart.findById(cart._id).populate('products.product');
+                return res.json(finalCart);
 
             default:
-                return res.status(405).json({ success: false, message: 'Method not allowed' });
+                return res.status(405).json({ message: 'Method not allowed' });
         }
     } catch (error) {
         console.error('Cart API Error:', error);
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
