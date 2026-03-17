@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -52,15 +53,13 @@ module.exports = async function handler(req, res) {
             return res.status(401).json({ success: false, message: 'No token provided' });
         }
 
-        // Simple JWT verification (in production, use proper JWT verification)
+        // Verify JWT token
         const token = authHeader.replace('Bearer ', '');
         let userId;
 
         try {
-            // Decode base64 token (simple encoding for demo)
-            const decoded = Buffer.from(token, 'base64').toString();
-            const userData = JSON.parse(decoded);
-            userId = userData.id || userData._id;
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            userId = decoded.id;
         } catch (e) {
             return res.status(401).json({ success: false, message: 'Invalid token' });
         }
