@@ -142,11 +142,25 @@ module.exports = async function handler(req, res) {
                 const updatedCart = await Cart.findById(cartToUpdate._id).populate('products.product');
                 return res.json(updatedCart);
 
-            case 'PUT':
-                // Update quantity
-                const { productId: updateProductId, quantity: newQuantity } = req.body;
+            case 'PUT': {
+                // Update quantity - productId in URL path, quantity in body
+                const path = req.url.split('?')[0];
+                const parts = path.split('/').filter(Boolean);
+                let updateProductId = null;
 
-                cart = await Cart.findOne({ user: userIdObj });
+                // Find the index of 'update' and get the next part
+                const updateIndex = parts.indexOf('update');
+                if (updateIndex !== -1 && updateIndex < parts.length - 1) {
+                    updateProductId = parts[updateIndex + 1];
+                }
+
+                const { quantity: newQuantity } = req.body;
+
+                if (!updateProductId) {
+                    return res.status(400).json({ message: 'Product ID is required' });
+                }
+
+                let cart = await Cart.findOne({ user: userIdObj });
                 if (!cart) {
                     return res.status(404).json({ message: 'Cart not found' });
                 }
@@ -162,11 +176,21 @@ module.exports = async function handler(req, res) {
                     return res.json(updatedCart);
                 }
                 return res.status(404).json({ message: 'Item not found in cart' });
+            }
 
-            case 'DELETE':
-                const { productId: deleteProductId } = req.query;
+            case 'DELETE': {
+                // Extract productId from URL path - format: /api/cart/remove/123 or /cart/remove/123
+                const path = req.url.split('?')[0];
+                const parts = path.split('/').filter(Boolean);
+                let deleteProductId = null;
 
-                cart = await Cart.findOne({ user: userIdObj });
+                // Find the index of 'remove' and get the next part
+                const removeIndex = parts.indexOf('remove');
+                if (removeIndex !== -1 && removeIndex < parts.length - 1) {
+                    deleteProductId = parts[removeIndex + 1];
+                }
+
+                let cart = await Cart.findOne({ user: userIdObj });
                 if (!cart) {
                     return res.status(404).json({ message: 'Cart not found' });
                 }
@@ -184,6 +208,7 @@ module.exports = async function handler(req, res) {
                 await cart.save();
                 const finalCart = await Cart.findById(cart._id).populate('products.product');
                 return res.json(finalCart);
+            }
 
             default:
                 return res.status(405).json({ message: 'Method not allowed' });
