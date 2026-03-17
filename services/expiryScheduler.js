@@ -24,6 +24,13 @@ const createTransporter = () => {
 const sendExpiryNotificationEmail = async (expiringProducts) => {
     if (expiringProducts.length === 0) return;
 
+    // Check if SMTP credentials are configured
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.error('[ExpiryScheduler] SMTP credentials not configured. Email will not be sent.');
+        console.log('[ExpiryScheduler] Please configure SMTP_USER and SMTP_PASS in .env file');
+        return;
+    }
+
     const transporter = createTransporter();
 
     // Create product list HTML
@@ -213,41 +220,57 @@ const checkExpiringProducts = async () => {
     try {
         // Connect to MongoDB if not already connected
         if (mongoose.connection.readyState !== 1) {
+            if (!MONGODB_URI) {
+                console.error('[ExpiryScheduler] MONGODB_URI not configured');
+                return [];
+            }
             await mongoose.connect(MONGODB_URI);
             console.log('[ExpiryScheduler] Connected to MongoDB');
         }
 
-        const Product = mongoose.model('Product', new mongoose.Schema({
-            id: String,
-            type: String,
-            brand: String,
-            name: String,
-            subheading: String,
-            denomination: String,
-            value: Number,
-            currency: String,
-            category: String,
-            image: String,
-            description: String,
-            price: Number,
-            createdDateTime: Date,
-            validityEndDateTime: Date,
-            inStock: Boolean,
-            stock: Number,
-            popular: Boolean,
-        }));
+        // Get Product model - check if already registered, otherwise create a simple one
+        let Product;
+        try {
+            Product = mongoose.model('Product');
+        } catch (e) {
+            // Model not registered, create a simple schema
+            const productSchema = new mongoose.Schema({
+                id: String,
+                type: String,
+                brand: String,
+                name: String,
+                subheading: String,
+                denomination: String,
+                value: Number,
+                currency: String,
+                category: String,
+                image: String,
+                description: String,
+                price: Number,
+                createdDateTime: Date,
+                validityEndDateTime: Date,
+                inStock: Boolean,
+                stock: Number,
+                popular: Boolean,
+            }, { strict: false });
+            Product = mongoose.model('Product', productSchema);
+        }
 
         const now = new Date();
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + EXPIRY_WARNING_DAYS);
 
-        // Find products that are expiring within the next 10 days
+        // Find products that are expiring within the next X days
+        // Consider product as "in stock" if either inStock is true OR stock >= 1
         const expiringProducts = await Product.find({
             validityEndDateTime: {
                 $gte: now,
                 $lte: futureDate
             },
-            inStock: true
+            $or: [
+                { inStock: true },
+                { stock: { $gte: 1 } }
+            ]
         }).lean();
 
         console.log(`[ExpiryScheduler] Found ${expiringProducts.length} products expiring within ${EXPIRY_WARNING_DAYS} days`);

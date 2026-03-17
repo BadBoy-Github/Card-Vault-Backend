@@ -1,4 +1,4 @@
-oconst Product = require('../models/Product');
+const Product = require('../models/Product');
 const Newsletter = require('../api/_models/Newsletter');
 
 // Generate a 9-character alphanumeric ID with uppercase, lowercase, and numbers

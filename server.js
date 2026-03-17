@@ -58,6 +58,7 @@ app.get('/sitemap.xml', async (req, res) => {
             { url: '/featured-product/example', priority: '0.8', freq: 'weekly' },
             { url: '/product/example', priority: '0.7', freq: 'weekly' },
             { url: '/wishlist', priority: '0.8', freq: 'weekly' },
+            { url: '/cart', priority: '0.8', freq: 'weekly' },
             { url: '/orders', priority: '0.8', freq: 'weekly' },
             { url: '/profile', priority: '0.7', freq: 'monthly' },
             { url: '/login', priority: '0.5', freq: 'yearly' },
@@ -109,12 +110,31 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
+app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/payment', require('./api/payment'));
 app.use('/api/newsletter', require('./api/newsletter'));
 app.use('/api/sitemap', require('./api/sitemap'));
 
 // Manual trigger endpoint for expiry check (for testing)
+// Supports both GET (for Vercel cron) and POST (for manual testing)
 app.post('/api/trigger-expiry-check', async (req, res) => {
+    try {
+        const products = await checkExpiringProducts();
+        res.json({
+            success: true,
+            message: `Found ${products.length} expiring products`,
+            products: products.map(p => ({
+                name: p.name,
+                brand: p.brand,
+                validityEndDateTime: p.validityEndDateTime
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.get('/api/trigger-expiry-check', async (req, res) => {
     try {
         const products = await checkExpiringProducts();
         res.json({

@@ -80,5 +80,11 @@
             "source": "/api/email",
             "destination": "/api/email"
         }
+    ],
+    "crons": [
+        {
+            "path": "/api/trigger-expiry-check",
+            "schedule": "0 */6 * * *"
+        }
     ]
 }
