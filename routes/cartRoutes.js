@@ -3,6 +3,24 @@ const router = express.Router();
 const { getCart, addToCart, removeFromCart, updateCartQuantity, clearCart, checkCart } = require('../controllers/cartController');
 const { protect } = require('../middleware/authMiddleware');
 
+// CORS headers for Vercel
+const corsHeaders = (req, res, next) => {
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+    next();
+};
+
+// Apply CORS to all routes
+router.use(corsHeaders);
+
 router.route('/')
     .get(protect, getCart);
 
