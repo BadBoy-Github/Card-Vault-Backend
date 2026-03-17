@@ -65,6 +65,26 @@
             "destination": "/api/payment"
         },
         {
+            "source": "/api/cart",
+            "destination": "/api/cart"
+        },
+        {
+            "source": "/api/cart/add",
+            "destination": "/api/cart"
+        },
+        {
+            "source": "/api/cart/remove/:productId",
+            "destination": "/api/cart"
+        },
+        {
+            "source": "/api/cart/update/:productId",
+            "destination": "/api/cart"
+        },
+        {
+            "source": "/api/cart/check/:productId",
+            "destination": "/api/cart"
+        },
+        {
             "source": "/api/wishlist/add",
             "destination": "/api/wishlist"
         },
