@@ -84,7 +84,7 @@
     "crons": [
         {
             "path": "/api/trigger-expiry-check",
-            "schedule": "0 */6 * * *"
+            "schedule": "0 0 * * *"
         }
     ]
 }

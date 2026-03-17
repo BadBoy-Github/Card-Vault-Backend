@@ -164,7 +164,7 @@ These products will expire soon. Please take necessary action before they become
 
 
 <p style="margin-top:20px; font-size:12px; color:#777; line-height:1.6;">
-This is an automated notification sent every 6 hours.
+This is an automated notification sent once per day.
 </p>
 
 </td>
@@ -288,14 +288,13 @@ const checkExpiringProducts = async () => {
 
 // Start the scheduler
 const startExpiryScheduler = () => {
-    // Run every 6 hours: at minutes 0 of hours 0,6,12,18
-    // '0 0,6,12,18 * * *' = at 00:00, 06:00, 12:00, 18:00 every day
-    cron.schedule('0 0,6,12,18 * * *', async () => {
+    // Run once per day at midnight: '0 0 * * *' = at 00:00 every day
+    cron.schedule('0 0 * * *', async () => {
         console.log('[ExpiryScheduler] Running expiry check...');
         await checkExpiringProducts();
     });
 
-    console.log('[ExpiryScheduler] Expiry notification scheduler started. Will run every 6 hours.');
+    console.log('[ExpiryScheduler] Expiry notification scheduler started. Will run once per day at midnight.');
 
     // Also run immediately on startup (optional, can be removed if not desired)
     // Uncomment the line below to run on startup
