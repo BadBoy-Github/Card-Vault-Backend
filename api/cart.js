@@ -88,14 +88,30 @@ module.exports = async function handler(req, res) {
                 // Filter out products that don't exist or have been deleted
                 const validProducts = cart.products.filter(item => item.product !== null);
 
-                // If there were invalid products, update the cart
-                if (validProducts.length !== cart.products.length) {
-                    cart.products = validProducts;
+                // Check for out-of-stock products and filter them out
+                const outOfStockProducts = [];
+                const inStockProducts = validProducts.filter(item => {
+                    if (item.product && item.product.stock < 1) {
+                        outOfStockProducts.push({
+                            id: item.product._id,
+                            name: item.product.name
+                        });
+                        return false;
+                    }
+                    return true;
+                });
+
+                // If there were invalid or out-of-stock products, update the cart
+                if (validProducts.length !== cart.products.length || outOfStockProducts.length > 0) {
+                    cart.products = inStockProducts;
                     await cart.save();
                 }
 
-                // Return cart directly (matching original controller format)
-                return res.json(cart);
+                // Return cart with information about removed out-of-stock items
+                return res.json({
+                    ...cart.toObject(),
+                    removedOutOfStock: outOfStockProducts
+                });
 
             case 'POST':
                 // Add to cart
