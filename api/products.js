@@ -325,8 +325,11 @@ module.exports = async function handler(req, res) {
     switch (method) {
         case 'GET':
             try {
-                // Check for expiry check trigger (for Vercel cron)
-                if (query.triggerExpiryCheck === 'true' || req.url.includes('trigger-expiry-check')) {
+                // Check for expiry check trigger (for Vercel cron) - check in both query and URL
+                const expiryCheckInQuery = query && query.triggerExpiryCheck === 'true';
+                const expiryCheckInUrl = req.url && req.url.includes('triggerExpiryCheck=true');
+                console.log('[DEBUG] req.url:', req.url, 'query:', JSON.stringify(query));
+                if (expiryCheckInQuery || expiryCheckInUrl) {
                     console.log('[ExpiryScheduler] Running expiry check...');
                     const products = await checkExpiringProducts();
                     return res.json({
@@ -363,7 +366,7 @@ module.exports = async function handler(req, res) {
                     // For 'all' type, filter is empty (returns all products)
 
                     if (searchQuery) {
-                        // Search by name, brand, or category
+                        // Search by name, brand, category, description, or subheading
                         const searchRegex = new RegExp(searchQuery, 'i');
                         products = await Product.find({
                             ...filter,
@@ -371,7 +374,8 @@ module.exports = async function handler(req, res) {
                                 { name: searchRegex },
                                 { brand: searchRegex },
                                 { category: searchRegex },
-                                { description: searchRegex }
+                                { description: searchRegex },
+                                { subheading: searchRegex }
                             ]
                         });
                     } else {
