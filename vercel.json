@@ -104,7 +104,7 @@
     "crons": [
         {
             "path": "/api/products?triggerExpiryCheck=true",
-            "schedule": "0 */6 * * *"
+            "schedule": "0 10 * * *"
         }
     ]
 }

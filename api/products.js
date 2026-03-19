@@ -149,7 +149,7 @@ These products will expire soon. Please take necessary action before they become
 
 
 <p style="margin-top:20px; font-size:12px; color:#777; line-height:1.6;">
-This is an automated notification sent every 6 hours.
+This is an automated notification sent once per day.
 </p>
 
 </td>
