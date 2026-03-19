@@ -94,8 +94,8 @@ module.exports = async function handler(req, res) {
     // Get product ID from path or query
     const productId = getProductIdFromPath(req.url) || query.id;
 
-    // Determine product type (regular or featured)
-    const productType = query.type === 'featured' ? 'featured' : 'regular';
+    // Determine product type (regular, featured, or all)
+    const productType = query.type === 'featured' ? 'featured' : (query.type === 'all' ? 'all' : 'regular');
 
     // Check if this is a request for a new product ID preview
     if (method === 'GET' && query.generateId === 'true') {
@@ -124,7 +124,13 @@ module.exports = async function handler(req, res) {
                     let products;
 
                     // Build filter based on type
-                    const filter = productType === 'featured' ? { type: 'featured' } : { type: { $ne: 'featured' } };
+                    let filter = {};
+                    if (productType === 'featured') {
+                        filter = { type: 'featured' };
+                    } else if (productType === 'regular') {
+                        filter = { type: { $ne: 'featured' } };
+                    }
+                    // For 'all' type, filter is empty (returns all products)
 
                     if (searchQuery) {
                         // Search by name, brand, or category

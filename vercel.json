@@ -99,6 +99,10 @@
         {
             "source": "/api/email",
             "destination": "/api/email"
+        },
+        {
+            "source": "/api/trigger-expiry-check",
+            "destination": "/api/expiryCheck"
         }
     ],
     "crons": [
