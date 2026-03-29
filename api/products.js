@@ -365,6 +365,19 @@ module.exports = async function handler(req, res) {
                     }
                     // For 'all' type, filter is empty (returns all products)
 
+                    // Build sort option
+                    let sortOption = { name: 1 }; // Default: alphabetical ascending
+                    const sortParam = query.sort;
+                    if (sortParam === 'name-asc') {
+                        sortOption = { name: 1 };
+                    } else if (sortParam === 'name-desc') {
+                        sortOption = { name: -1 };
+                    } else if (sortParam === 'price-asc') {
+                        sortOption = { price: 1 };
+                    } else if (sortParam === 'price-desc') {
+                        sortOption = { price: -1 };
+                    }
+
                     if (searchQuery) {
                         // Search by name, brand, category, description, or subheading
                         const searchRegex = new RegExp(searchQuery, 'i');
@@ -377,9 +390,9 @@ module.exports = async function handler(req, res) {
                                 { description: searchRegex },
                                 { subheading: searchRegex }
                             ]
-                        });
+                        }).sort(sortOption);
                     } else {
-                        products = await Product.find(filter);
+                        products = await Product.find(filter).sort(sortOption);
                     }
 
                     return res.status(200).json(products);
