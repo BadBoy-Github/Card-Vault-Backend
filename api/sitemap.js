@@ -1,8 +1,7 @@
 // Dynamic Sitemap Generator for SEO - Optimized for card vault, card-vault, card vaults, card-vaults
 // This generates XML sitemap dynamically based on products in the database
 
-const express = require('express');
-const router = express.Router();
+const connectDB = require('./_lib/db');
 
 // Static pages that should always be in sitemap (no demo products)
 const staticPages = [
@@ -101,9 +100,27 @@ function escapeXml(unsafe) {
     });
 }
 
-// GET /api/sitemap.xml - Generate XML sitemap
-router.get('/', async (req, res) => {
+// Vercel serverless function handler
+module.exports = async function handler(req, res) {
+    // CORS headers
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    // Only allow GET method
+    if (req.method !== 'GET') {
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
+
     try {
+        await connectDB();
+
         // Try to fetch products from database
         let regularProducts = [];
         let featuredProducts = [];
@@ -128,72 +145,41 @@ router.get('/', async (req, res) => {
             }).limit(1000).lean();
 
             console.log(`Sitemap: Found ${regularProducts.length} regular products and ${featuredProducts.length} featured products`);
-            console.log('Regular product IDs:', regularProducts.map(p => p.id || p._id));
-            console.log('Featured product IDs:', featuredProducts.map(p => p.id || p._id));
         } catch (dbError) {
             console.log('Could not fetch products for sitemap, using static pages only:', dbError.message);
             // If database is not available, just serve static pages
         }
 
-        // Set proper headers for XML
-        res.set('Content-Type', 'application/xml');
-        res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-
-        // Send the sitemap
-        res.send(generateSitemap(regularProducts, featuredProducts));
-    } catch (error) {
-        console.error('Sitemap generation error:', error);
-        res.status(500).send('Error generating sitemap');
-    }
-});
-
-// GET /api/sitemap - Generate JSON sitemap (alternative format)
-router.get('/json', async (req, res) => {
-    try {
-        let regularProducts = [];
-        let featuredProducts = [];
-
-        try {
-            const Product = require('../models/Product');
-
-            // Fetch regular products (type is not 'featured' or type is undefined/null)
-            regularProducts = await Product.find({
-                $or: [
-                    { type: { $ne: 'featured' } },
-                    { type: { $exists: false } },
-                    { type: null }
-                ]
-            }).limit(1000).lean();
-
-            // Fetch featured products (type is 'featured')
-            featuredProducts = await Product.find({
-                type: 'featured'
-            }).limit(1000).lean();
-        } catch (dbError) {
-            console.log('Could not fetch products for sitemap:', dbError.message);
+        // Check if JSON format is requested
+        const urlPath = req.url.split('?')[0];
+        if (urlPath.endsWith('/json')) {
+            // Return JSON sitemap
+            const sitemap = {
+                baseUrl: BASE_URL,
+                lastModified: new Date().toISOString(),
+                pages: staticPages,
+                regularProducts: regularProducts.map(p => ({
+                    url: `/product/${p._id || p.id}`,
+                    name: p.name,
+                    image: p.image
+                })),
+                featuredProducts: featuredProducts.map(p => ({
+                    url: `/featured-product/${p._id || p.id}`,
+                    name: p.name,
+                    image: p.image
+                }))
+            };
+            return res.status(200).json(sitemap);
         }
 
-        const sitemap = {
-            baseUrl: BASE_URL,
-            lastModified: new Date().toISOString(),
-            pages: staticPages,
-            regularProducts: regularProducts.map(p => ({
-                url: `/product/${p._id || p.id}`,
-                name: p.name,
-                image: p.image
-            })),
-            featuredProducts: featuredProducts.map(p => ({
-                url: `/featured-product/${p._id || p.id}`,
-                name: p.name,
-                image: p.image
-            }))
-        };
+        // Set proper headers for XML
+        res.setHeader('Content-Type', 'application/xml');
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
 
-        res.json(sitemap);
+        // Send the XML sitemap
+        return res.status(200).send(generateSitemap(regularProducts, featuredProducts));
     } catch (error) {
-        console.error('Sitemap JSON generation error:', error);
-        res.status(500).json({ error: 'Error generating sitemap' });
+        console.error('Sitemap generation error:', error);
+        return res.status(500).send('Error generating sitemap');
     }
-});
-
-module.exports = router;
+};

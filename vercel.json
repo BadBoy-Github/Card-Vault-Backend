@@ -105,6 +105,10 @@
             "destination": "/api/email"
         },
         {
+            "source": "/api/sitemap/json",
+            "destination": "/api/sitemap"
+        },
+        {
             "source": "/api/trigger-expiry-stock-update",
             "destination": "/api/trigger-expiry-stock-update"
         }
