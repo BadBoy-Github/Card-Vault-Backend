@@ -215,6 +215,88 @@ card-vaults.vercel.app
     }
 };
 
+// Update expired products to have stock = 0
+const updateExpiredProductsStock = async () => {
+    try {
+        // Connect to MongoDB if not already connected
+        if (mongoose.connection.readyState !== 1) {
+            if (!MONGODB_URI) {
+                console.error('[ExpiryScheduler] MONGODB_URI not configured');
+                return { modifiedCount: 0 };
+            }
+            await mongoose.connect(MONGODB_URI);
+            console.log('[ExpiryScheduler] Connected to MongoDB');
+        }
+
+        // Get Product model
+        let Product;
+        try {
+            Product = mongoose.model('Product');
+        } catch (e) {
+            // Model not registered, create a simple schema
+            const productSchema = new mongoose.Schema({
+                id: String,
+                type: String,
+                brand: String,
+                name: String,
+                subheading: String,
+                denomination: String,
+                value: Number,
+                currency: String,
+                category: String,
+                image: String,
+                description: String,
+                price: Number,
+                createdDateTime: Date,
+                validityEndDateTime: Date,
+                inStock: Boolean,
+                stock: Number,
+                popular: Boolean,
+            }, { strict: false });
+            Product = mongoose.model('Product', productSchema);
+        }
+
+        const now = new Date();
+
+        // Find all expired products that still have stock > 0 or inStock = true
+        const expiredProducts = await Product.find({
+            validityEndDateTime: { $lt: now },
+            $or: [
+                { inStock: true },
+                { stock: { $gte: 1 } }
+            ]
+        });
+
+        if (expiredProducts.length === 0) {
+            console.log('[ExpiryScheduler] No expired products with stock to update');
+            return { modifiedCount: 0 };
+        }
+
+        // Update all expired products to have stock = 0 and inStock = false
+        const result = await Product.updateMany(
+            {
+                validityEndDateTime: { $lt: now },
+                $or: [
+                    { inStock: true },
+                    { stock: { $gte: 1 } }
+                ]
+            },
+            {
+                $set: {
+                    stock: 0,
+                    inStock: false
+                }
+            }
+        );
+
+        console.log(`[ExpiryScheduler] Updated ${result.modifiedCount} expired products to stock = 0`);
+        return result;
+    } catch (error) {
+        console.error('[ExpiryScheduler] Error updating expired products stock:', error.message);
+        return { modifiedCount: 0 };
+    }
+};
+
 // Check for expiring products and send notification
 const checkExpiringProducts = async () => {
     try {
@@ -292,16 +374,19 @@ const startExpiryScheduler = () => {
     cron.schedule('0 0 * * *', async () => {
         console.log('[ExpiryScheduler] Running expiry check...');
         await checkExpiringProducts();
+        await updateExpiredProductsStock();
     });
 
     console.log('[ExpiryScheduler] Expiry notification scheduler started. Will run once per day at midnight.');
 
     // Also run immediately on startup (optional, can be removed if not desired)
-    // Uncomment the line below to run on startup
+    // Uncomment the lines below to run on startup
     // checkExpiringProducts();
+    // updateExpiredProductsStock();
 };
 
 module.exports = {
     startExpiryScheduler,
-    checkExpiringProducts
+    checkExpiringProducts,
+    updateExpiredProductsStock
 };

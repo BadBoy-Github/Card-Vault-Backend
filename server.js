@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 // Import services
-const { startExpiryScheduler, checkExpiringProducts } = require('./services/expiryScheduler');
+const { startExpiryScheduler, checkExpiringProducts, updateExpiredProductsStock } = require('./services/expiryScheduler');
 
 // Load environment variables
 dotenv.config();
@@ -196,6 +196,34 @@ app.get('/api/trigger-expiry-check', async (req, res) => {
                 brand: p.brand,
                 validityEndDateTime: p.validityEndDateTime
             }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Manual trigger endpoint for updating expired products stock (for testing)
+// Supports both GET (for Vercel cron) and POST (for manual testing)
+app.post('/api/trigger-expiry-stock-update', async (req, res) => {
+    try {
+        const result = await updateExpiredProductsStock();
+        res.json({
+            success: true,
+            message: `Updated ${result.modifiedCount} expired products to stock = 0`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.get('/api/trigger-expiry-stock-update', async (req, res) => {
+    try {
+        const result = await updateExpiredProductsStock();
+        res.json({
+            success: true,
+            message: `Updated ${result.modifiedCount} expired products to stock = 0`,
+            modifiedCount: result.modifiedCount
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
