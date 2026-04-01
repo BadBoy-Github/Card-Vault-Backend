@@ -47,7 +47,7 @@ function generateSitemap(regularProducts = [], featuredProducts = []) {
         regularProducts.forEach(product => {
             const url = `/product/${product._id || product.id}`;
             const image = product.image ? `<image:image>
-      <image:loc>${product.image}</image:loc>
+      <image:loc>${escapeXml(product.image)}</image:loc>
       <image:title>${escapeXml(product.name || '')}</image:title>
       <image:caption>Buy ${escapeXml(product.name || '')} gift card on Card Vault</image:caption>
     </image:image>` : '';
@@ -68,7 +68,7 @@ function generateSitemap(regularProducts = [], featuredProducts = []) {
         featuredProducts.forEach(product => {
             const url = `/featured-product/${product._id || product.id}`;
             const image = product.image ? `<image:image>
-      <image:loc>${product.image}</image:loc>
+      <image:loc>${escapeXml(product.image)}</image:loc>
       <image:title>${escapeXml(product.name || '')} - Featured</image:title>
       <image:caption>Featured: ${escapeXml(product.name || '')} gift card on Card Vault</image:caption>
     </image:image>` : '';
