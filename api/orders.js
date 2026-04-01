@@ -36,6 +36,11 @@ const parsePath = (url) => {
     const path = url.split('?')[0];
     const parts = path.split('/').filter(Boolean);
 
+    // /api/payment/config or /payment/config
+    if (parts.includes('payment') && parts.includes('config')) {
+        return { action: 'payment-config' };
+    }
+
     // /api/orders/myorders or /orders/myorders
     if (parts.includes('myorders')) {
         return { action: 'myorders' };
@@ -92,6 +97,32 @@ module.exports = async function handler(req, res) {
 
     // For admin routes, check if user is admin
     const isAdmin = user && user.role === 'admin';
+
+    // Handle payment config route
+    if (action === 'payment-config') {
+        if (method === 'GET') {
+            try {
+                const upiId = process.env.UPI_ID || '';
+                const merchantName = process.env.UPI_MERCHANT_NAME || 'CardVault';
+                const qrImageUrl = process.env.UPI_QR_IMAGE_URL || '';
+
+                return res.status(200).json({
+                    upiId: upiId,
+                    merchantName: merchantName,
+                    qrImageUrl: qrImageUrl,
+                    paymentInstructions: [
+                        'Scan the QR code using any UPI app (GPay, PhonePe, Paytm)',
+                        'Enter the exact amount shown',
+                        'After payment, enter the UTR/Transaction ID',
+                        'Wait for payment verification'
+                    ]
+                });
+            } catch (error) {
+                return res.status(500).json({ message: error.message });
+            }
+        }
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
 
     // Handle myorders route
     if (action === 'myorders') {

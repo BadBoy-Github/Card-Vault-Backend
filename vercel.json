@@ -62,7 +62,11 @@
         },
         {
             "source": "/api/payment/config",
-            "destination": "/api/payment"
+            "destination": "/api/orders"
+        },
+        {
+            "source": "/api/newsletter",
+            "destination": "/api/email"
         },
         {
             "source": "/api/cart",
@@ -99,10 +103,6 @@
         {
             "source": "/api/email",
             "destination": "/api/email"
-        },
-        {
-            "source": "/api/trigger-expiry-check",
-            "destination": "/api/trigger-expiry-check"
         },
         {
             "source": "/api/trigger-expiry-stock-update",
