@@ -174,7 +174,7 @@ module.exports = async function handler(req, res) {
 
         // Set proper headers for XML
         res.setHeader('Content-Type', 'application/xml');
-        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+        res.setHeader('Cache-Control', 'public, max-age=60'); // Cache for 1 minute
 
         // Send the XML sitemap
         return res.status(200).send(generateSitemap(regularProducts, featuredProducts));
