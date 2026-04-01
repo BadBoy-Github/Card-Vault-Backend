@@ -1116,7 +1116,7 @@ ${name}
 ${category ? `<div style="font-size:13px; color:#666; margin-top:8px;">${category}</div>` : ''}
 
 <div style="font-size:22px; font-weight:600; color:#222; margin-top:12px;">
-${price}
+₹ ${price}
 </div>
 
 ${description ? `<div style="font-size:13px; color:#666; margin-top:12px; line-height:1.5;">${description.substring(0, 100)}${description.length > 100 ? '...' : ''}</div>` : ''}
