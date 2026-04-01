@@ -99,6 +99,14 @@
         {
             "source": "/api/email",
             "destination": "/api/email"
+        },
+        {
+            "source": "/api/trigger-expiry-check",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/api/trigger-expiry-stock-update",
+            "destination": "/api/index"
         }
     ],
     "crons": [
