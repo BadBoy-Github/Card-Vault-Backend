@@ -102,11 +102,11 @@
         },
         {
             "source": "/api/trigger-expiry-check",
-            "destination": "/api/index"
+            "destination": "/api/trigger-expiry-check"
         },
         {
             "source": "/api/trigger-expiry-stock-update",
-            "destination": "/api/index"
+            "destination": "/api/trigger-expiry-stock-update"
         }
     ],
     "crons": [
