@@ -208,7 +208,8 @@ const checkExpiringProducts = async () => {
     futureDate.setDate(futureDate.getDate() + EXPIRY_WARNING_DAYS);
 
     const expiringProducts = await Product.find({
-        validityEndDateTime: { $gte: now, $lte: futureDate }
+        validityEndDateTime: { $gte: now, $lte: futureDate },
+        stock: { $gte: 1 }
     }).lean();
 
     console.log(`[ExpiryScheduler] Found ${expiringProducts.length} products expiring within ${EXPIRY_WARNING_DAYS} days`);

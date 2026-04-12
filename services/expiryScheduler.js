@@ -342,17 +342,13 @@ const checkExpiringProducts = async () => {
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + EXPIRY_WARNING_DAYS);
 
-        // Find products that are expiring within the next X days
-        // Consider product as "in stock" if either inStock is true OR stock >= 1
+        // Find products that are expiring within the next X days and have at least 1 stock
         const expiringProducts = await Product.find({
             validityEndDateTime: {
                 $gte: now,
                 $lte: futureDate
             },
-            $or: [
-                { inStock: true },
-                { stock: { $gte: 1 } }
-            ]
+            stock: { $gte: 1 }
         }).lean();
 
         console.log(`[ExpiryScheduler] Found ${expiringProducts.length} products expiring within ${EXPIRY_WARNING_DAYS} days`);
