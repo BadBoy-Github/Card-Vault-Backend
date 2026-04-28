@@ -1,10 +1,6 @@
 {
     "rewrites": [
         {
-            "source": "/sitemap.xml",
-            "destination": "/sitemap.xml"
-        },
-        {
             "source": "/robots.txt",
             "destination": "/robots.txt"
         },
@@ -103,10 +99,6 @@
         {
             "source": "/api/email",
             "destination": "/api/email"
-        },
-        {
-            "source": "/api/sitemap/json",
-            "destination": "/api/sitemap"
         },
         {
             "source": "/api/trigger-expiry-stock-update",

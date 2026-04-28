@@ -18,7 +18,7 @@ The Card Vault Backend provides a comprehensive API for managing digital gift ca
 - **Newsletter Subscription**: Email marketing capabilities
 - **Admin Dashboard**: Administrative controls and analytics
 - **Image Upload**: Cloudinary integration for product images
-- **SEO Optimization**: Dynamic sitemap generation
+
 - **CORS Support**: Configured for cross-origin requests
 
 ## 🛠️ Technology Stack
@@ -113,7 +113,6 @@ backend/
 │   ├── wishlist.js        # Wishlist functionality
 │   ├── payment.js         # Payment processing
 │   ├── newsletter.js      # Email subscriptions
-│   ├── sitemap.js         # SEO sitemap
 │   ├── email.js           # Email utilities
 │   ├── _lib/              # Shared utilities
 │   └── _models/           # Database models (Vercel)
@@ -183,7 +182,6 @@ backend/
 
 ### Utility Endpoints
 
-- `GET /sitemap.xml` - Dynamic sitemap for SEO
 - `POST /api/trigger-expiry-check` - Manual expiry check (testing)
 - `POST /api/trigger-expiry-stock-update` - Manual stock update (testing)
 
@@ -259,9 +257,7 @@ npm run dev
 # Production mode
 npm start
 
-# Generate sitemap (utility)
-npm run generate-sitemap
-```
+
 
 ## 🧪 Testing & Development
 

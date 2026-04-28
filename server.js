@@ -62,98 +62,6 @@ app.get('/', (req, res) => {
     res.send('Card Vault API is running...');
 });
 
-// Sitemap Route
-app.get('/sitemap.xml', async (req, res) => {
-    try {
-        const Product = require('./models/Product');
-
-        // Fetch regular products (type is not 'featured' or type is undefined/null)
-        const regularProducts = await Product.find({
-            $or: [
-                { type: { $ne: 'featured' } },
-                { type: { $exists: false } },
-                { type: null }
-            ]
-        }).limit(1000).lean();
-
-        // Fetch featured products (type is 'featured')
-        const featuredProducts = await Product.find({
-            type: 'featured'
-        }).limit(1000).lean();
-
-        const today = new Date().toISOString().split('T')[0];
-        const baseUrl = 'https://card-vaults.vercel.app';
-
-        let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-`;
-
-        // Static pages - matching frontend routes (no demo products)
-        const staticPages = [
-            { url: '/', priority: '1.0', freq: 'daily' },
-            { url: '/search', priority: '0.9', freq: 'daily' },
-            { url: '/wishlist', priority: '0.8', freq: 'weekly' },
-            { url: '/cart', priority: '0.8', freq: 'weekly' },
-            { url: '/orders', priority: '0.8', freq: 'weekly' },
-            { url: '/profile', priority: '0.7', freq: 'monthly' },
-            { url: '/login', priority: '0.5', freq: 'yearly' },
-            { url: '/register', priority: '0.5', freq: 'yearly' },
-            { url: '/terms', priority: '0.6', freq: 'monthly' },
-            { url: '/forgot-password', priority: '0.3', freq: 'yearly' }
-        ];
-
-        staticPages.forEach(page => {
-            xml += `  <url>
-    <loc>${baseUrl}${page.url}</loc>
-    <changefreq>${page.freq}</changefreq>
-    <priority>${page.priority}</priority>
-    <lastmod>${today}</lastmod>
-  </url>\n`;
-        });
-
-        // Regular product pages
-        regularProducts.forEach(product => {
-            xml += `  <url>
-    <loc>${baseUrl}/product/${product._id}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-    <lastmod>${today}</lastmod>\n`;
-            if (product.image) {
-                xml += `    <image:image>
-      <image:loc>${product.image}</image:loc>
-      <image:title>${product.name}</image:title>
-    </image:image>\n`;
-            }
-            xml += `  </url>\n`;
-        });
-
-        // Featured product pages
-        featuredProducts.forEach(product => {
-            xml += `  <url>
-    <loc>${baseUrl}/featured-product/${product._id}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <lastmod>${today}</lastmod>\n`;
-            if (product.image) {
-                xml += `    <image:image>
-      <image:loc>${product.image}</image:loc>
-      <image:title>${product.name} - Featured</image:title>
-    </image:image>\n`;
-            }
-            xml += `  </url>\n`;
-        });
-
-        xml += '</urlset>';
-
-        res.set('Content-Type', 'application/xml');
-        res.set('Cache-Control', 'public, max-age=3600');
-        res.send(xml);
-    } catch (error) {
-        console.error('Sitemap error:', error);
-        // Fallback to static sitemap
-        res.redirect('/sitemap.xml');
-    }
-});
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -164,7 +72,6 @@ app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/payment', require('./api/payment'));
 app.use('/api/newsletter', require('./api/newsletter'));
-app.use('/api/sitemap', require('./api/sitemap'));
 
 // Manual trigger endpoint for expiry check (for testing)
 // Supports both GET (for Vercel cron) and POST (for manual testing)
