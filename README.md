@@ -13,8 +13,9 @@ The Card Vault Backend provides a comprehensive API for managing digital gift ca
 - **Order Processing**: Full order lifecycle management
 - **Shopping Cart & Wishlist**: Persistent cart and wishlist functionality
 - **Payment Integration**: UPI payment processing
-- **Email Notifications**: Automated email alerts for orders and expiry notifications
+- **Email Notifications**: Automated email alerts for orders, expiry notifications, and user reminders
 - **Automated Expiry Management**: Scheduled checks for expiring products
+- **User Reminder System**: Automated emails for empty carts and available wishlist items
 - **Newsletter Subscription**: Email marketing capabilities
 - **Admin Dashboard**: Administrative controls and analytics
 - **Image Upload**: Cloudinary integration for product images
@@ -113,6 +114,7 @@ backend/
 │   ├── wishlist.js        # Wishlist functionality
 │   ├── payment.js         # Payment processing
 │   ├── newsletter.js      # Email subscriptions
+│   ├── reminders.js       # User reminders (cart/wishlist)
 │   ├── email.js           # Email utilities
 │   ├── _lib/              # Shared utilities
 │   └── _models/           # Database models (Vercel)
@@ -182,8 +184,16 @@ backend/
 
 ### Utility Endpoints
 
+- `POST /api/reminders` - Send user reminders (empty cart, wishlist items)
 - `POST /api/trigger-expiry-check` - Manual expiry check (testing)
 - `POST /api/trigger-expiry-stock-update` - Manual stock update (testing)
+
+## ⏰ Scheduled Tasks
+
+The application includes automated scheduled tasks that run on Vercel:
+
+- **Daily Expiry Check** (10:00 AM): Automatically checks for expired products and updates their status
+- **User Reminders** (2:00 PM): Sends friendly reminder emails for empty carts and available wishlist items
 
 ## 🗄️ Database Models
 

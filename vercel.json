@@ -103,12 +103,20 @@
         {
             "source": "/api/trigger-expiry-stock-update",
             "destination": "/api/trigger-expiry-stock-update"
+        },
+        {
+            "source": "/api/reminders",
+            "destination": "/api/reminders"
         }
     ],
     "crons": [
         {
             "path": "/api/products?triggerExpiryCheck=true",
             "schedule": "0 10 * * *"
+        },
+        {
+            "path": "/api/reminders",
+            "schedule": "0 14 * * *"
         }
     ]
 }
