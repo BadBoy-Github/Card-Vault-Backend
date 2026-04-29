@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const mongoose = require('mongoose');
 const connectDB = require('./_lib/db');
 // const User = require('./_models/User');
 // const Wishlist = require('./_models/Wishlist');
@@ -34,9 +35,6 @@ const productSchema = new mongoose.Schema({
     popular: { type: Boolean, default: false }
 });
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
-
-// Cart Schema (inline definition for reminders)
-const mongoose = require('mongoose');
 const cartItemSchema = new mongoose.Schema({
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     quantity: { type: Number, default: 1 }
