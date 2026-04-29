@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const connectDB = require('./_lib/db');
 const User = require('./_models/User');
-const Wishlist = require('./_models/Wishlist');
+// const Wishlist = require('./_models/Wishlist');
 const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
 
@@ -19,6 +19,20 @@ const cartSchema = new mongoose.Schema({
 });
 
 const Cart = mongoose.models.Cart || mongoose.model('Cart', cartSchema);
+
+// Wishlist Schema
+const wishlistItemSchema = new mongoose.Schema({
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    addedAt: { type: Date, default: Date.now }
+});
+
+const wishlistSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    products: [wishlistItemSchema],
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Wishlist = mongoose.models.Wishlist || mongoose.model('Wishlist', wishlistSchema);
 
 // Create reusable transporter
 const createTransporter = () => {
@@ -247,12 +261,10 @@ module.exports = async function handler(req, res) {
         let wishlistReminderCount = 0;
 
         // 1. Send empty cart reminders
-        const emptyCarts = await Cart.find({
-            products: { $size: 0 } // Empty cart
-        }).populate('user');
+        const allCarts = await Cart.find({}).populate('user');
 
-        for (const cart of emptyCarts) {
-            if (cart.user && cart.user.email) {
+        for (const cart of allCarts) {
+            if ((!cart.products || cart.products.length === 0) && cart.user && cart.user.email) {
                 try {
                     await sendEmptyCartReminder(cart.user.email, cart.user.name || 'Valued Customer');
                     emptyCartCount++;
