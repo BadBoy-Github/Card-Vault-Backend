@@ -70,7 +70,6 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
-app.use('/api/payment', require('./api/payment'));
 app.use('/api/newsletter', require('./api/newsletter'));
 
 // Manual trigger endpoint for expiry check (for testing)

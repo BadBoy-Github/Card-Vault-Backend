@@ -66,7 +66,7 @@ const Wishlist = mongoose.models.Wishlist || mongoose.model('Wishlist', wishlist
 
 // Create reusable transporter
 const createTransporter = () => {
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: process.env.SMTP_PORT || 587,
         secure: false,
@@ -286,50 +286,29 @@ module.exports = async function handler(req, res) {
 
     try {
         await connectDB();
-        console.log('Connected to DB successfully');
 
         let emptyCartCount = 0;
         let wishlistReminderCount = 0;
 
         // 1. Send empty cart reminders
         const users = await User.find({});
-        console.log('Total users found:', users.length);
-        for (const user of users.slice(0, 5)) {
-            console.log(`User ${user._id}: ${user.email}`);
-        }
 
         for (const user of users) {
             const cart = await Cart.findOne({ user: user._id });
-            if (cart) {
-                console.log(`Cart for user ${user._id}: products length ${cart.products ? cart.products.length : 'null'}`);
-                if (cart.products && cart.products.length === 0) {
-                    try {
-                        await sendEmptyCartReminder(user.email, user.name || 'Valued Customer');
-                        emptyCartCount++;
-                    } catch (emailError) {
-                        console.error('Failed to send empty cart reminder:', emailError);
-                    }
+            if (cart && cart.products && cart.products.length === 0) {
+                try {
+                    await sendEmptyCartReminder(user.email, user.name || 'Valued Customer');
+                    emptyCartCount++;
+                } catch (emailError) {
+                    console.error('Failed to send empty cart reminder:', emailError);
                 }
-            } else {
-                console.log(`No cart for user ${user._id}`);
             }
         }
-        console.log('Empty cart reminders sent:', emptyCartCount);
 
         // 2. Send wishlist reminders
         const wishlists = await Wishlist.find({})
             .populate('user')
             .populate('products.product');
-        console.log('Total wishlists found:', wishlists.length);
-        for (const wishlist of wishlists.slice(0, 5)) {
-            console.log(`Wishlist ${wishlist._id}: products length ${wishlist.products ? wishlist.products.length : 'null'}, user ${wishlist.user ? wishlist.user.email : 'null'}`);
-            for (const item of wishlist.products || []) {
-                const prod = item.product;
-                if (prod) {
-                    console.log(`  Product ${prod._id}: stock ${prod.stock}, validityEnd ${prod.validityEndDateTime}, valid ${isProductAvailable(prod)}`);
-                }
-            }
-        }
 
         for (const wishlist of wishlists) {
             if (!wishlist.user || !wishlist.user.email) continue;
@@ -355,7 +334,6 @@ module.exports = async function handler(req, res) {
                 }
             }
         }
-        console.log('Wishlist reminders sent:', wishlistReminderCount);
 
         return res.status(200).json({
             message: 'Reminder emails sent successfully',
