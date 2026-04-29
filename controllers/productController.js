@@ -145,6 +145,14 @@ const createProduct = async (req, res) => {
             popular,
         });
 
+        // If product is expired, set stock to 0
+        if (product.validityEndDateTime < new Date()) {
+            product.stock = 0;
+        }
+
+        // Set inStock based on stock
+        product.inStock = product.stock > 0;
+
         const createdProduct = await product.save();
 
         // Send newsletter emails to all subscribers
@@ -375,7 +383,14 @@ const updateProduct = async (req, res) => {
             product.validityEndDateTime = req.body.validityEndDateTime || product.validityEndDateTime;
             product.stock = req.body.stock !== undefined ? req.body.stock : product.stock;
             product.popular = req.body.popular || product.popular;
-            product.inStock = req.body.stock > 0;
+
+            // If product is expired, set stock to 0
+            if (product.validityEndDateTime < new Date()) {
+                product.stock = 0;
+            }
+
+            // Set inStock based on stock
+            product.inStock = product.stock > 0;
 
             const updatedProduct = await product.save();
             res.json(updatedProduct);
