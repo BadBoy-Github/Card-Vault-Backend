@@ -293,7 +293,7 @@ module.exports = async function handler(req, res) {
 
         for (const user of users) {
             const cart = await Cart.findOne({ user: user._id });
-            if (cart && cart.products && cart.products.length === 0) {
+            if (!cart || (cart.products && cart.products.length === 0)) {
                 try {
                     await sendEmptyCartReminder(user.email, user.name || 'Valued Customer');
                     emptyCartCount++;
