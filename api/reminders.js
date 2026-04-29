@@ -1,9 +1,39 @@
 const nodemailer = require('nodemailer');
 const connectDB = require('./_lib/db');
-const User = require('./_models/User');
+// const User = require('./_models/User');
 // const Wishlist = require('./_models/Wishlist');
-const Product = require('./_models/Product');
+// const Product = require('./_models/Product');
 const jwt = require('jsonwebtoken');
+
+// User Schema
+const userSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true, select: false },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    createdAt: { type: Date, default: Date.now }
+});
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+// Product Schema
+const productSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    brand: { type: String, required: true },
+    name: { type: String, required: true },
+    denomination: String,
+    value: { type: Number, required: true },
+    currency: { type: String, default: 'INR' },
+    category: { type: String, required: true },
+    image: { type: String, required: true },
+    description: String,
+    price: { type: Number, required: true },
+    createdDateTime: { type: Date, default: Date.now },
+    validityEndDateTime: Date,
+    inStock: { type: Boolean, default: true },
+    stock: { type: Number, default: 1 },
+    popular: { type: Boolean, default: false }
+});
+const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 
 // Cart Schema (inline definition for reminders)
 const mongoose = require('mongoose');
@@ -262,20 +292,26 @@ module.exports = async function handler(req, res) {
         let wishlistReminderCount = 0;
 
         // 1. Send empty cart reminders
-        const allCarts = await Cart.find({}).populate('user');
-        console.log('Total carts found:', allCarts.length);
-        for (const cart of allCarts.slice(0, 5)) {
-            console.log(`Cart ${cart._id}: products length ${cart.products ? cart.products.length : 'null'}, user ${cart.user ? cart.user.email : 'null'}`);
+        const users = await User.find({});
+        console.log('Total users found:', users.length);
+        for (const user of users.slice(0, 5)) {
+            console.log(`User ${user._id}: ${user.email}`);
         }
 
-        for (const cart of allCarts) {
-            if ((!cart.products || cart.products.length === 0) && cart.user && cart.user.email) {
-                try {
-                    await sendEmptyCartReminder(cart.user.email, cart.user.name || 'Valued Customer');
-                    emptyCartCount++;
-                } catch (emailError) {
-                    console.error('Failed to send empty cart reminder:', emailError);
+        for (const user of users) {
+            const cart = await Cart.findOne({ user: user._id });
+            if (cart) {
+                console.log(`Cart for user ${user._id}: products length ${cart.products ? cart.products.length : 'null'}`);
+                if (cart.products && cart.products.length === 0) {
+                    try {
+                        await sendEmptyCartReminder(user.email, user.name || 'Valued Customer');
+                        emptyCartCount++;
+                    } catch (emailError) {
+                        console.error('Failed to send empty cart reminder:', emailError);
+                    }
                 }
+            } else {
+                console.log(`No cart for user ${user._id}`);
             }
         }
         console.log('Empty cart reminders sent:', emptyCartCount);
